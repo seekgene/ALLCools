@@ -128,6 +128,67 @@ def _get_bam_chrom_index(bam_path):
     return pd.Index(chrom_set)
 
 
+def hamming_distance(str1, str2):
+    """Calculate hamming distance between two strings."""
+    if len(str1) != len(str2):
+        raise ValueError("Strings must be of equal length.")
+    return sum(ch1 != ch2 for ch1, ch2 in zip(str1, str2))
+
+def correct_tag(mpileup_line):
+    """Correct UMI in mpileup output."""
+    mpileup_fields = mpileup_line.split("\t")
+    # The last field records UMIs, each UMI is separated by comma
+    umis = mpileup_fields[-1].split(",")
+    quals = mpileup_fields[5].split(",")
+    seqs = mpileup_fields[4].split(",")
+    # Count UMIs
+    umi_count = collections.Counter(umis)
+    # Sort UMIs by count in descending order
+    umis = sorted(umis, key=lambda x: umi_count[x], reverse=True)
+    # Iterate through sorted UMIs, if a UMI with lower count has hamming distance of 1 with a UMI with higher count, correct it to the higher count UMI
+    for i in range(len(umis)):
+        for j in range(i+1, len(umis)):
+            if hamming_distance(umis[i], umis[j]) == 1:
+                if umi_count[umis[i]] > umi_count[umis[j]]:
+                    umis[j] = umis[i]
+                elif umi_count[umis[i]] < umi_count[umis[j]]:
+                    umis[i] = umis[j]
+                else:
+                    # If counts are equal, skip without correction
+                    continue
+    # Then perform base correction: 1. Check if bases at the same position with the same UMI are consistent, if not, change inconsistent bases to the majority;
+    # 2. If bases with the same UMI are inconsistent and have equal support counts, judge by quality and change to the base with higher quality;
+    # 3. If bases with the same UMI are inconsistent, have equal support counts, and equal quality, discard all information for this UMI
+    
+    # Iterate through umi_count to find UMIs with count > 1
+    for umi in umi_count.keys():
+        if umi_count[umi] > 1:
+            # Find all positions supporting this UMI
+            umi_indices = [i for i, x in enumerate(umis) if x == umi]
+            # Iterate through these positions and compare if bases are consistent
+            for i in range(len(umi_indices)):
+                for j in range(i+1, len(umi_indices)):
+                    if seqs[umi_indices[i]] != seqs[umi_indices[j]]:
+                        # If inconsistent, change base to the one with higher count
+                        if umi_count[umis[umi_indices[i]]] > umi_count[umis[umi_indices[j]]]:
+                            seqs[umi_indices[j]] = seqs[umi_indices[i]]
+                        elif umi_count[umis[umi_indices[i]]] < umi_count[umis[umi_indices[j]]]:
+                            seqs[umi_indices[i]] = seqs[umi_indices[j]]
+                        else:
+                            # If counts are equal, judge by quality and change to the base with higher quality
+                            if quals[umi_indices[i]] > quals[umi_indices[j]]:
+                                seqs[umi_indices[j]] = seqs[umi_indices[i]]
+                            elif quals[umi_indices[i]] < quals[umi_indices[j]]:
+                                seqs[umi_indices[i]] = seqs[umi_indices[j]]
+                            else:
+                                # If quality is also equal, discard all information for this UMI
+                                seqs[umi_indices[i]] = seqs[umi_indices[j]] = "N"
+    # Discard position information where seqs is N, then reassemble mpileup fields
+    mpileup_fields[-1] = ",".join([umi for i, umi in enumerate(umis) if seqs[i] != "N"])
+    mpileup_fields[4] = ",".join([seq for i, seq in enumerate(seqs) if seqs[i] != "N"])
+    mpileup_fields[5] = ",".join([qual for i, qual in enumerate(quals) if seqs[i] != "N"])
+    return "\t".join(mpileup_fields)
+
 def _bam_to_allc_worker(
     bam_path,
     reference_fasta,
@@ -142,11 +203,14 @@ def _bam_to_allc_worker(
     compress_level=5,
     tabix=True,
     save_count_df=False,
+    tag=None,
 ):
     """None parallel bam_to_allc worker function, call by bam_to_allc."""
     # mpileup
+    if tag:
+        mpileup_params = f" --output-extra {tag} "
     if region is None:
-        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {bam_path}"
+        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} {bam_path}"
         pipes = subprocess.Popen(
             shlex.split(mpileup_cmd),
             stdout=subprocess.PIPE,
@@ -161,7 +225,7 @@ def _bam_to_allc_worker(
             include_header=True,
             samtools_parms_str=None,
         )
-        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} -"
+        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} -"
         pipes = subprocess.Popen(
             shlex.split(mpileup_cmd),
             stdin=bam_handle.file,
@@ -245,6 +309,8 @@ def _bam_to_allc_worker(
                 context = seq[(pos - num_upstr_bases) : (pos + num_downstr_bases + 1)]
             except Exception:  # complete context is not available, skip
                 continue
+            if tag:
+                fields = correct_mpileup_fields(line).split("\t")
             unconverted_c = fields[4].count(".")
             converted_c = fields[4].count("T")
             cov = unconverted_c + converted_c
@@ -280,6 +346,8 @@ def _bam_to_allc_worker(
                 )
             except Exception:  # complete context is not available, skip
                 continue
+            if tag:
+                fields = correct_mpileup_fields(line).split("\t")
             unconverted_c = fields[4].count(",")
             converted_c = fields[4].count("a")
             cov = unconverted_c + converted_c
@@ -357,6 +425,7 @@ def bam_to_allc(
     compress_level=5,
     save_count_df=False,
     convert_bam_strandness=False,
+    tag=None,
 ):
     """\
     Generate 1 ALLC file from 1 position sorted BAM file via samtools mpileup.
@@ -389,6 +458,8 @@ def bam_to_allc(
         If true, save an ALLC context count table next to ALLC file.
     convert_bam_strandness
         {convert_bam_strandness_doc}
+    tag
+        This value will pass to samtools mpileup --output-extra, e.g. "UR", will correct raw UMI by 1 edit distance.
 
     Returns
     -------
