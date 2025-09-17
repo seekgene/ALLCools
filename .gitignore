@@ -4,6 +4,7 @@ docs/allcools/_build/
 .idea/
 tests/output/*
 test/
+seekgene_test/
 *.icloud
 # Byte-compiled / optimized / DLL files
 __pycache__/
