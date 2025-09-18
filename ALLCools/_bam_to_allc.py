@@ -134,59 +134,81 @@ def hamming_distance(str1, str2):
         raise ValueError("Strings must be of equal length.")
     return sum(ch1 != ch2 for ch1, ch2 in zip(str1, str2))
 
-def correct_tag(mpileup_line):
+def phred33_to_quality(ascii_char):
+    """Convert Phred+33 ASCII character to quality score"""
+    return ord(ascii_char) - 33
+
+def correct_tag(mpileup_line, ref_base):
     """Correct UMI in mpileup output."""
     mpileup_fields = mpileup_line.split("\t")
+    
+    # when ref base is C, just extract seq is . or T pos info
+    # when ref base is G, just extract seq is , or a pos info
+    seqs = mpileup_fields[4].split(",")
+    if ref_base == "C":
+        keep_indice = [i for i in range(len(seqs)) if seqs[i] in [".", "T"]]
+    elif ref_base == "G":
+        keep_indice = [i for i in range(len(seqs)) if seqs[i] in [",", "a"]]
+    
     # The last field records UMIs, each UMI is separated by comma
     umis = mpileup_fields[-1].split(",")
     quals = mpileup_fields[5].split(",")
-    seqs = mpileup_fields[4].split(",")
+    
+    umis = [umis[i] for i in keep_indice]
+    quals = [quals[i] for i in keep_indice]
+    seqs = [seqs[i] for i in keep_indice]
+    
     # Count UMIs
     umi_count = collections.Counter(umis)
     # Sort UMIs by count in descending order
     umis = sorted(umis, key=lambda x: umi_count[x], reverse=True)
+    umi_dict = collections.defaultdict(lambda: {"qual": [], "seq": []})
     # Iterate through sorted UMIs, if a UMI with lower count has hamming distance of 1 with a UMI with higher count, correct it to the higher count UMI
     for i in range(len(umis)):
         for j in range(i+1, len(umis)):
             if hamming_distance(umis[i], umis[j]) == 1:
                 if umi_count[umis[i]] > umi_count[umis[j]]:
                     umis[j] = umis[i]
+                    umi_dict[umis[i]]["qual"].append(quals[j])
+                    umi_dict[umis[i]]["seq"].append(seqs[j])
                 elif umi_count[umis[i]] < umi_count[umis[j]]:
                     umis[i] = umis[j]
+                    umi_dict[umis[j]]["qual"].append(quals[i])
+                    umi_dict[umis[j]]["seq"].append(seqs[i])
                 else:
+                    umi_dict[umis[i]]["qual"].append(quals[i])
+                    umi_dict[umis[i]]["seq"].append(seqs[i])
                     # If counts are equal, skip without correction
                     continue
-    # Then perform base correction: 1. Check if bases at the same position with the same UMI are consistent, if not, change inconsistent bases to the majority;
-    # 2. If bases with the same UMI are inconsistent and have equal support counts, judge by quality and change to the base with higher quality;
-    # 3. If bases with the same UMI are inconsistent, have equal support counts, and equal quality, discard all information for this UMI
     
-    # Iterate through umi_count to find UMIs with count > 1
-    for umi in umi_count.keys():
-        if umi_count[umi] > 1:
-            # Find all positions supporting this UMI
-            umi_indices = [i for i, x in enumerate(umis) if x == umi]
-            # Iterate through these positions and compare if bases are consistent
-            for i in range(len(umi_indices)):
-                for j in range(i+1, len(umi_indices)):
-                    if seqs[umi_indices[i]] != seqs[umi_indices[j]]:
-                        # If inconsistent, change base to the one with higher count
-                        if umi_count[umis[umi_indices[i]]] > umi_count[umis[umi_indices[j]]]:
-                            seqs[umi_indices[j]] = seqs[umi_indices[i]]
-                        elif umi_count[umis[umi_indices[i]]] < umi_count[umis[umi_indices[j]]]:
-                            seqs[umi_indices[i]] = seqs[umi_indices[j]]
-                        else:
-                            # If counts are equal, judge by quality and change to the base with higher quality
-                            if quals[umi_indices[i]] > quals[umi_indices[j]]:
-                                seqs[umi_indices[j]] = seqs[umi_indices[i]]
-                            elif quals[umi_indices[i]] < quals[umi_indices[j]]:
-                                seqs[umi_indices[i]] = seqs[umi_indices[j]]
-                            else:
-                                # If quality is also equal, discard all information for this UMI
-                                seqs[umi_indices[i]] = seqs[umi_indices[j]] = "N"
-    # Discard position information where seqs is N, then reassemble mpileup fields
-    mpileup_fields[-1] = ",".join([umi for i, umi in enumerate(umis) if seqs[i] != "N"])
-    mpileup_fields[4] = ",".join([seq for i, seq in enumerate(seqs) if seqs[i] != "N"])
-    mpileup_fields[5] = ",".join([qual for i, qual in enumerate(quals) if seqs[i] != "N"])
+    # Iterate through umi_dict to find seqs with count > 1
+    for umi, info in umi_dict.items():
+        seq_counts = collections.Counter(info["seq"])
+        if len(seq_counts) > 1:
+            # Check if bases at the same position with the same UMI are consistent
+            # Then perform base correction: 
+            if seq_counts.values()[0] > seq_counts.values()[1]:
+                # # 1. Check if bases at the same position with the same UMI are consistent, if not, change inconsistent bases to the majority;
+                majority_base = seq_counts.most_common(1)[0][0]
+                info["seq"] = [majority_base if seq != majority_base else seq for seq in info["seq"]]
+            elif seq_counts.values()[0] == seq_counts.values()[1]:
+                quals = [phred33_to_quality(q) for q in info["qual"]]
+                max_qual = max(quals)
+                min_qual = min(quals)
+                if max_qual > min_qual:
+                    # # 2. If bases with the same UMI are inconsistent and have equal support counts, judge by quality and change to the base with higher quality;
+                    for i in range(len(info["seq"])):
+                        if phred33_to_quality(info["qual"][i]) > phred33_to_quality(info["qual"][i+1]):
+                            info["seq"][i] = info["seq"][i+1]
+                else:
+                    # # 3. If bases with the same UMI are inconsistent, have equal support counts, and equal quality, discard all information for this UMI
+                    del umi_dict[umi]
+    
+    # Iterate umi_dict, reassemble mpileup fields
+    mpileup_fields[-1] = ",".join(umi_dict.keys())
+    mpileup_fields[4] = ",".join([info["seq"][0] for umi, info in umi_dict.items()])
+    mpileup_fields[5] = ",".join([info["qual"][0] for umi, info in umi_dict.items()])
+    
     return "\t".join(mpileup_fields)
 
 def _bam_to_allc_worker(
@@ -310,7 +332,8 @@ def _bam_to_allc_worker(
             except Exception:  # complete context is not available, skip
                 continue
             if tag:
-                fields = correct_mpileup_fields(line).split("\t")
+                fields = correct_tag(line, "C").split("\t")
+            # Only count . and T, discard reads containing sequencing errors
             unconverted_c = fields[4].count(".")
             converted_c = fields[4].count("T")
             cov = unconverted_c + converted_c
@@ -347,7 +370,7 @@ def _bam_to_allc_worker(
             except Exception:  # complete context is not available, skip
                 continue
             if tag:
-                fields = correct_mpileup_fields(line).split("\t")
+                fields = correct_tag(line, "G").split("\t")
             unconverted_c = fields[4].count(",")
             converted_c = fields[4].count("a")
             cov = unconverted_c + converted_c
