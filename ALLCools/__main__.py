@@ -204,6 +204,10 @@ def bam_to_allc_register_subparser(subparser):
     )
 
     parser.add_argument("--compress_level", type=int, default=5, help=compress_level_doc)
+    parser.add_argument("--tag", 
+                            type=str, 
+                            required=False, 
+                            help="This value will pass to samtools mpileup --output-extra, e.g. 'UR', will correct raw UMI by 1 edit distance.")
 
     parser.add_argument(
         "--save_count_df",
