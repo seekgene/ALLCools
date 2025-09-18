@@ -139,20 +139,53 @@ def phred33_to_quality(ascii_char):
     return ord(ascii_char) - 33
 
 def correct_tag(mpileup_line, ref_base):
-    """Correct UMI in mpileup output."""
-    mpileup_fields = mpileup_line.split("\t")
+    """Correct UMI in mpileup output.
+    Input will like:
+    chr1    46930353        C       1       ,       I       GAAGGTGTGTAT
+    chr1    46930354        C       1       ,       I       GAAGGTGTGTAT
+    chr1    46930355        C       1       ,$      I       GAAGGTGTGTAT
+    chr1    47151364        C       1       ^9T     I       TTATATGGGGAG
+    chr1    47791302        C       2       TT      II      TGGTTGAGTGTG,GTAGTGTTTGAG
+    ...
+    column 1 is chromosome
+    column 2 is position
+    column 3 is reference base
+    column 4 is read depth
+    column 5 is base sequence
+    column 6 is base quality
+    column 7 is UMI, separated by comma
+    """
+    mpileup_fields = mpileup_line.strip().split("\t")
+    
+    # Check if we have enough fields
+    if len(mpileup_fields) < 7:
+        return mpileup_line
     
     # when ref base is C, just extract seq is . or T pos info
     # when ref base is G, just extract seq is , or a pos info
-    seqs = mpileup_fields[4].split(",")
+    seqs = list(mpileup_fields[4])  # Each character is a base
     if ref_base == "C":
         keep_indice = [i for i in range(len(seqs)) if seqs[i] in [".", "T"]]
     elif ref_base == "G":
         keep_indice = [i for i in range(len(seqs)) if seqs[i] in [",", "a"]]
+    else:
+        return mpileup_line  # Skip if not C or G
     
-    # The last field records UMIs, each UMI is separated by comma
+    # If no valid positions found, return empty result
+    if not keep_indice:
+        mpileup_fields[3] = "0"  # Set coverage to 0
+        mpileup_fields[4] = ""   # Empty sequence
+        mpileup_fields[5] = ""   # Empty quality
+        mpileup_fields[-1] = "" # Empty UMI
+        return "\t".join(mpileup_fields)
+    
+    # The last field records UMIs, each UMI is separated by space
     umis = mpileup_fields[-1].split(",")
-    quals = mpileup_fields[5].split(",")
+    quals = list(mpileup_fields[5])  # Each character is a quality score
+    
+    # Check length consistency
+    if len(seqs) != len(quals) or len(seqs) != len(umis):
+        return mpileup_line  # Return original if inconsistent
     
     umis = [umis[i] for i in keep_indice]
     quals = [quals[i] for i in keep_indice]
@@ -206,8 +239,8 @@ def correct_tag(mpileup_line, ref_base):
     
     # Iterate umi_dict, reassemble mpileup fields
     mpileup_fields[-1] = ",".join(umi_dict.keys())
-    mpileup_fields[4] = ",".join([info["seq"][0] for umi, info in umi_dict.items()])
-    mpileup_fields[5] = ",".join([info["qual"][0] for umi, info in umi_dict.items()])
+    mpileup_fields[4] = "".join([info["seq"][0] for umi, info in umi_dict.items()])
+    mpileup_fields[5] = "".join([info["qual"][0] for umi, info in umi_dict.items()])
     
     return "\t".join(mpileup_fields)
 
@@ -616,6 +649,7 @@ def bam_to_allc(
             compress_level=compress_level,
             tabix=tabix,
             save_count_df=save_count_df,
+            tag = tag
         )
 
         # clean up temp bam
