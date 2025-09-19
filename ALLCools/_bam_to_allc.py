@@ -343,8 +343,8 @@ def _bam_to_allc_worker(
     cur_out_pos = 0
     cov_dict = collections.defaultdict(int)  # context: cov_total
     mc_dict = collections.defaultdict(int)  # context: mc_total
-    mpl_fh1 = open(f"{output_path.replace('.gz','')}_mpl_old.txt", "w")
-    mpl_fh2 = open(f"{output_path.replace('.gz','')}_mpl_correction.txt", "w")
+    #mpl_fh1 = open(f"{output_path.replace('.gz','')}_mpl_old.txt", "w")
+    #mpl_fh2 = open(f"{output_path.replace('.gz','')}_mpl_correction.txt", "w")
     # process mpileup result
     for line in result_handle:
         total_line += 1
@@ -396,7 +396,7 @@ def _bam_to_allc_worker(
 
         # count converted and unconverted bases
         if fields[2] == "C":
-            mpl_fh1.write(line)
+            #mpl_fh1.write(line)
             # mpileup pos is 1-based, turn into 0 based
             pos = int(fields[1]) - 1
             try:
@@ -405,8 +405,8 @@ def _bam_to_allc_worker(
                 continue
             if tag:
                 fields = correct_tag(line, "C").split("\t")
-                new_line = "\t".join(fields)
-                mpl_fh2.write(f"{new_line}\n")
+                #new_line = "\t".join(fields)
+                #mpl_fh2.write(f"{new_line}\n")
             # Only count . and T, discard reads containing sequencing errors
             unconverted_c = fields[4].count(".")
             converted_c = fields[4].count("T")
@@ -433,7 +433,7 @@ def _bam_to_allc_worker(
                 cur_out_pos += len(data)
 
         elif fields[2] == "G":
-            mpl_fh1.write(line)
+            #mpl_fh1.write(line)
             pos = int(fields[1]) - 1
             try:
                 context = "".join(
@@ -446,8 +446,8 @@ def _bam_to_allc_worker(
                 continue
             if tag:
                 fields = correct_tag(line, "G").split("\t")
-                new_line = "\t".join(fields)
-                mpl_fh2.write(f"{new_line}\n")
+                #new_line = "\t".join(fields)
+                #mpl_fh2.write(f"{new_line}\n")
             unconverted_c = fields[4].count(",")
             converted_c = fields[4].count("a")
             cov = unconverted_c + converted_c
@@ -481,8 +481,8 @@ def _bam_to_allc_worker(
         output_file_handler.write(out)
     result_handle.close()
     output_file_handler.close()
-    mpl_fh1.close()
-    mpl_fh2.close()
+    #mpl_fh1.close()
+    #mpl_fh2.close()
 
     if tabix:
         subprocess.run(shlex.split(f"tabix -b 2 -e 2 -s 1 {output_path}"), check=True)
