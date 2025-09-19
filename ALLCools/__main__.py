@@ -207,7 +207,11 @@ def bam_to_allc_register_subparser(subparser):
     parser.add_argument("--tag", 
                             type=str, 
                             required=False, 
-                            help="This value will pass to samtools mpileup --output-extra, e.g. 'UR', will correct raw UMI by 1 edit distance.")
+                            help="Tag name to extract from BAM file using samtools mpileup --output-extra. "
+                                 "Common tags include: 'UR' for raw UMI sequences, 'UB' for corrected UMI sequences, "
+                                 "'CB' for cell barcodes. When specified, the tag values will be included in the "
+                                 "mpileup output and can be used for UMI-based error correction. For example, "
+                                 "using 'UR' will enable UMI correction with 1 edit distance tolerance.")
 
     parser.add_argument(
         "--save_count_df",
