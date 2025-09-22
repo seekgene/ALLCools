@@ -179,13 +179,21 @@ def correct_tag(mpileup_line, ref_base):
         mpileup_fields[-1] = "" # Empty UMI
         return "\t".join(mpileup_fields)
     
-    # The last field records UMIs, each UMI is separated by space
+    # The last field records UMIs, each UMI is separated by comma
     umis = mpileup_fields[-1].split(",")
     quals = list(mpileup_fields[5])  # Each character is a quality score
     
-    # Check length consistency
+    # Check length consistency before UMI correction
     if len(seqs) != len(quals) or len(seqs) != len(umis):
+        log.warning(f"Length mismatch at {mpileup_fields[0]}:{mpileup_fields[1]} - "
+                   f"seqs: {len(seqs)}, quals: {len(quals)}, umis: {len(umis)}. "
+                   f"Skipping UMI correction for this position.")
         return mpileup_line  # Return original if inconsistent
+    
+    # Additional check: verify one-to-one correspondence
+    log.debug(f"Position {mpileup_fields[0]}:{mpileup_fields[1]} - "
+             f"Base-Quality-UMI correspondence verified: "
+             f"bases={len(seqs)}, qualities={len(quals)}, UMIs={len(umis)}")
     
     umis = [umis[i] for i in keep_indice]
     quals = [quals[i] for i in keep_indice]
@@ -233,32 +241,38 @@ def correct_tag(mpileup_line, ref_base):
     for umi, info in umi_dict.items():
         seq_counts = collections.Counter(info["seq"])
         if len(seq_counts) > 1:
-            # Convert seq_counts.values() to list for indexing
-            count_values = list(seq_counts.values())
-            if len(count_values) >= 2:
-                if count_values[0] > count_values[1]:
-                    # Use majority base
-                    majority_base = seq_counts.most_common(1)[0][0]
-                    info["seq"] = [majority_base] * len(info["seq"])
-                elif count_values[0] == count_values[1]:
-                    # Equal counts, judge by quality
-                    qual_scores = [phred33_to_quality(q) for q in info["qual"]]
-                    if len(set(qual_scores)) > 1:
-                        max_qual_idx = qual_scores.index(max(qual_scores))
-                        best_base = info["seq"][max_qual_idx]
-                        info["seq"] = [best_base] * len(info["seq"])
-                    else:
-                        # Only one quality score, keep as is
-                        pass
+            # Get the most common base and its count
+            most_common_bases = seq_counts.most_common()
+            most_common_base, most_common_count = most_common_bases[0]
+            
+            # Check if there's a tie for the most common base
+            tied_bases = [base for base, count in most_common_bases if count == most_common_count]
+            
+            if len(tied_bases) == 1:
+                # Clear winner by count, use the most common base
+                corrected_base = most_common_base
             else:
-                # Only one unique sequence, keep as is
-                pass
-        
-        # If all qualities are the same and sequences are different, remove this UMI
-        if len(seq_counts) > 1:
-            qual_scores = [phred33_to_quality(q) for q in info["qual"]]
-            if len(set(qual_scores)) == 1:  # All qualities are the same
-                umis_to_delete.append(umi)
+                # Tie in counts, decide by quality scores
+                base_quality_map = {}
+                for i, (seq, qual) in enumerate(zip(info["seq"], info["qual"])):
+                    if seq in tied_bases:
+                        if seq not in base_quality_map:
+                            base_quality_map[seq] = []
+                        base_quality_map[seq].append(phred33_to_quality(qual))
+                
+                # Calculate average quality for each tied base
+                best_base = None
+                best_avg_quality = -1
+                for base, qualities in base_quality_map.items():
+                    avg_quality = sum(qualities) / len(qualities)
+                    if avg_quality > best_avg_quality:
+                        best_avg_quality = avg_quality
+                        best_base = base
+                
+                corrected_base = best_base if best_base else most_common_base
+            
+            # Apply correction: replace all bases with the corrected base
+            info["seq"] = [corrected_base] * len(info["seq"])
     
     # Remove problematic UMIs
     for umi in umis_to_delete:
@@ -299,6 +313,7 @@ def _bam_to_allc_worker(
 ):
     """None parallel bam_to_allc worker function, call by bam_to_allc."""
     # mpileup
+    mpileup_params = None
     if tag:
         mpileup_params = f" --output-extra {tag} "
     if region is None:
@@ -343,8 +358,8 @@ def _bam_to_allc_worker(
     cur_out_pos = 0
     cov_dict = collections.defaultdict(int)  # context: cov_total
     mc_dict = collections.defaultdict(int)  # context: mc_total
-    #mpl_fh1 = open(f"{output_path.replace('.gz','')}_mpl_old.txt", "w")
-    #mpl_fh2 = open(f"{output_path.replace('.gz','')}_mpl_correction.txt", "w")
+    mpl_fh1 = open(f"{output_path.replace('.gz','')}_mpl_old.txt", "w")
+    mpl_fh2 = open(f"{output_path.replace('.gz','')}_mpl_correction.txt", "w")
     # process mpileup result
     for line in result_handle:
         total_line += 1
@@ -365,10 +380,20 @@ def _bam_to_allc_worker(
         incons_basecalls = read_bases.count("+") + read_bases.count("-")
         if incons_basecalls > 0:
             read_bases_no_indel = ""
+            # Track positions to keep for quality scores and UMI
+            positions_to_keep = []
             index = 0
             prev_index = 0
+            base_position = 0  # Position in the original sequence (excluding indel markers)
+            
             while index < len(read_bases):
                 if read_bases[index] == "+" or read_bases[index] == "-":
+                    # Add positions for bases before indel
+                    for i in range(prev_index, index):
+                        if read_bases[i] not in "+-0123456789":
+                            positions_to_keep.append(base_position)
+                            base_position += 1
+                    
                     # get insert size
                     indel_size = ""
                     ind = index + 1
@@ -386,27 +411,46 @@ def _bam_to_allc_worker(
                     except Exception:
                         index += 1
                         continue
+                    
                     read_bases_no_indel += read_bases[prev_index:index]
                     index = ind + indel_size
                     prev_index = index
                 else:
                     index += 1
+            
+            # Add remaining positions
+            for i in range(prev_index, index):
+                if read_bases[i] not in "+-0123456789":
+                    positions_to_keep.append(base_position)
+                    base_position += 1
+                    
             read_bases_no_indel += read_bases[prev_index:index]
             fields[4] = read_bases_no_indel
+            
+            # Update quality scores (fields[5]) and UMI (fields[6]) based on kept positions
+            if len(fields) > 5 and fields[5]:
+                quality_scores = fields[5]
+                new_quality_scores = "".join([quality_scores[i] for i in positions_to_keep if i < len(quality_scores)])
+                fields[5] = new_quality_scores
+                
+            if len(fields) > 6 and fields[6]:
+                umi_sequences = fields[6].strip().split(",")
+                new_umi_sequences = [umi_sequences[i] for i in positions_to_keep if i < len(umi_sequences)]
+                fields[6] = ",".join(new_umi_sequences)
 
         # count converted and unconverted bases
         if fields[2] == "C":
-            #mpl_fh1.write(line)
+            mpl_fh1.write(line)
             # mpileup pos is 1-based, turn into 0 based
             pos = int(fields[1]) - 1
             try:
                 context = seq[(pos - num_upstr_bases) : (pos + num_downstr_bases + 1)]
             except Exception:  # complete context is not available, skip
                 continue
-            if tag:
-                fields = correct_tag(line, "C").split("\t")
-                #new_line = "\t".join(fields)
-                #mpl_fh2.write(f"{new_line}\n")
+            if tag and int(fields[3]) > 1:
+                fields = correct_tag("\t".join(fields), "C").split("\t")
+                new_line = "\t".join(fields)
+                mpl_fh2.write(f"{new_line}\n")
             # Only count . and T, discard reads containing sequencing errors
             unconverted_c = fields[4].count(".")
             converted_c = fields[4].count("T")
@@ -433,7 +477,7 @@ def _bam_to_allc_worker(
                 cur_out_pos += len(data)
 
         elif fields[2] == "G":
-            #mpl_fh1.write(line)
+            mpl_fh1.write(line)
             pos = int(fields[1]) - 1
             try:
                 context = "".join(
@@ -444,10 +488,10 @@ def _bam_to_allc_worker(
                 )
             except Exception:  # complete context is not available, skip
                 continue
-            if tag:
-                fields = correct_tag(line, "G").split("\t")
-                #new_line = "\t".join(fields)
-                #mpl_fh2.write(f"{new_line}\n")
+            if tag and int(fields[3]) > 1:
+                fields = correct_tag("\t".join(fields), "G").split("\t")
+                new_line = "\t".join(fields)
+                mpl_fh2.write(f"{new_line}\n")
             unconverted_c = fields[4].count(",")
             converted_c = fields[4].count("a")
             cov = unconverted_c + converted_c
@@ -481,8 +525,8 @@ def _bam_to_allc_worker(
         output_file_handler.write(out)
     result_handle.close()
     output_file_handler.close()
-    #mpl_fh1.close()
-    #mpl_fh2.close()
+    mpl_fh1.close()
+    mpl_fh2.close()
 
     if tabix:
         subprocess.run(shlex.split(f"tabix -b 2 -e 2 -s 1 {output_path}"), check=True)
