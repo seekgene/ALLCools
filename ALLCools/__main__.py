@@ -212,7 +212,11 @@ def bam_to_allc_register_subparser(subparser):
                                  "'CB' for cell barcodes. When specified, the tag values will be included in the "
                                  "mpileup output and can be used for UMI-based error correction. For example, "
                                  "using 'UR' will enable UMI correction with 1 edit distance tolerance.")
-
+    parser.add_argument("--debug", 
+                            action="store_true", 
+                            help="Enable debug mode. In debug mode, additional files will be created "
+                                 "to store mpileup output for debugging purposes.")
+    parser.set_defaults(debug=False)
     parser.add_argument(
         "--save_count_df",
         dest="save_count_df",
