@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1400" height="1800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; fill: #2c3e50; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #34495e; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; fill: #2c3e50; }
+      .small-text { font-family: Arial, sans-serif; font-size: 12px; fill: #7f8c8d; }
+      .code { font-family: 'Courier New', monospace; font-size: 12px; fill: #e74c3c; }
+      .box { fill: #ecf0f1; stroke: #bdc3c7; stroke-width: 2; rx: 8; }
+      .process-box { fill: #3498db; stroke: #2980b9; stroke-width: 2; rx: 8; }
+      .decision-box { fill: #f39c12; stroke: #e67e22; stroke-width: 2; rx: 8; }
+      .result-box { fill: #2ecc71; stroke: #27ae60; stroke-width: 2; rx: 8; }
+      .example-box { fill: #f8f9fa; stroke: #6c757d; stroke-width: 1; rx: 5; }
+      .arrow { stroke: #34495e; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .white-text { fill: white; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="700" y="40" text-anchor="middle" class="title">UMI Correction Detailed Workflow</text>
+  
+  <!-- Input Data Example -->
+  <rect x="50" y="70" width="1300" height="120" class="example-box"/>
+  <text x="70" y="95" class="subtitle">Input Data Example:</text>
+  <text x="70" y="115" class="code">chr1  46930353  C  5  .T.T,  IIHII  AAGTCGATCGAT,AAGTCGATCGAA,AAGTCGATCGAT,AAGTCGATCGAA,AAGTCGATCGAC</text>
+  <text x="70" y="135" class="small-text">Columns: chromosome position ref_base depth base_sequence quality_scores UMI_sequences(comma-separated)</text>
+  <text x="70" y="155" class="small-text">Note: Only '.' and 'T' (for C) or ',' and 'a' (for G) bases are retained for methylation analysis</text>
+
+  <!-- Step 1: Input Validation -->
+  <rect x="100" y="220" width="300" height="80" class="process-box"/>
+  <text x="250" y="250" text-anchor="middle" class="white-text subtitle">Step 1: Input Validation</text>
+  <text x="250" y="270" text-anchor="middle" class="white-text small-text">Check field count and length consistency</text>
+
+  <!-- Example for Step 1 -->
+  <rect x="450" y="220" width="400" height="80" class="example-box"/>
+  <text x="470" y="240" class="small-text">Example: Validate base, quality, UMI lengths</text>
+  <text x="470" y="255" class="code">bases: ['.','T','.','T',','] → 5 items</text>
+  <text x="470" y="270" class="code">quals: ['I','I','H','I','I'] → 5 items</text>
+  <text x="470" y="285" class="code">umis: ['AAGTCGATCGAT','AAGTCGATCGAA',...] → 5 items</text>
+
+  <!-- Arrow 1 -->
+  <line x1="250" y1="300" x2="250" y2="340" class="arrow"/>
+
+  <!-- Step 2: Filter Valid Bases -->
+  <rect x="100" y="350" width="300" height="80" class="process-box"/>
+  <text x="250" y="380" text-anchor="middle" class="white-text subtitle">Step 2: Filter Valid Bases</text>
+  <text x="250" y="400" text-anchor="middle" class="white-text small-text">Keep '.' and 'T' (C sites) or ',' and 'a' (G sites)</text>
+
+  <!-- Example for Step 2 -->
+  <rect x="450" y="350" width="500" height="80" class="example-box"/>
+  <text x="470" y="370" class="small-text">Example: For reference base C, filter valid bases</text>
+  <text x="470" y="385" class="code">Original: ['.','T','.','T',','] → Keep indices: [0,1,2,3]</text>
+  <text x="470" y="400" class="code">Filtered bases: ['.','T','.','T']</text>
+  <text x="470" y="415" class="code">Corresponding UMIs: ['AAGTCGATCGAT','AAGTCGATCGAA','AAGTCGATCGAT','AAGTCGATCGAA']</text>
+
+  <!-- Arrow 2 -->
+  <line x1="250" y1="430" x2="250" y2="470" class="arrow"/>
+
+  <!-- Step 3: Group by UMI -->
+  <rect x="100" y="480" width="300" height="80" class="process-box"/>
+  <text x="250" y="510" text-anchor="middle" class="white-text subtitle">Step 3: Group by UMI</text>
+  <text x="250" y="530" text-anchor="middle" class="white-text small-text">Count occurrences and collect data for each UMI</text>
+
+  <!-- Example for Step 3 -->
+  <rect x="450" y="480" width="500" height="80" class="example-box"/>
+  <text x="470" y="500" class="small-text">Example: UMI grouping results</text>
+  <text x="470" y="515" class="code">AAGTCGATCGAT: count=2, bases=['.','T'], quals=['I','I']</text>
+  <text x="470" y="530" class="code">AAGTCGATCGAA: count=2, bases=['T','.'], quals=['I','I']</text>
+  <text x="470" y="545" class="code">unique_umis = ['AAGTCGATCGAT', 'AAGTCGATCGAA']</text>
+
+  <!-- Arrow 3 -->
+  <line x1="250" y1="560" x2="250" y2="600" class="arrow"/>
+
+  <!-- Step 4: UMI Correction (Hamming Distance) -->
+  <rect x="100" y="610" width="300" height="100" class="decision-box"/>
+  <text x="250" y="640" text-anchor="middle" class="white-text subtitle">Step 4: UMI Correction</text>
+  <text x="250" y="660" text-anchor="middle" class="white-text small-text">Merge UMIs with Hamming distance = 1</text>
+  <text x="250" y="675" text-anchor="middle" class="white-text small-text">High-frequency UMI absorbs low-frequency UMI</text>
+
+  <!-- Example for Step 4 -->
+  <rect x="450" y="610" width="500" height="100" class="example-box"/>
+  <text x="470" y="630" class="small-text">Example: Hamming distance calculation</text>
+  <text x="470" y="645" class="code">AAGTCGATCGAT vs AAGTCGATCGAA</text>
+  <text x="470" y="660" class="code">Difference at position 11: T≠A → Hamming distance=1</text>
+  <text x="470" y="675" class="code">Equal counts (2=2) → Keep separate, no merge</text>
+  <text x="470" y="690" class="code">If counts differ, high-frequency absorbs low-frequency</text>
+
+  <!-- Arrow 4 -->
+  <line x1="250" y1="710" x2="250" y2="750" class="arrow"/>
+
+  <!-- Step 5: Base Correction -->
+  <rect x="100" y="760" width="300" height="120" class="decision-box"/>
+  <text x="250" y="790" text-anchor="middle" class="white-text subtitle">Step 5: Base Correction</text>
+  <text x="250" y="810" text-anchor="middle" class="white-text small-text">Intra-UMI base consistency correction</text>
+  <text x="250" y="825" text-anchor="middle" class="white-text small-text">1. Select by frequency</text>
+  <text x="250" y="840" text-anchor="middle" class="white-text small-text">2. If equal frequency, select by quality score</text>
+
+  <!-- Example for Step 5 -->
+  <rect x="450" y="760" width="500" height="120" class="example-box"/>
+  <text x="470" y="780" class="small-text">Example: Intra-UMI base correction</text>
+  <text x="470" y="795" class="code">AAGTCGATCGAT: bases=['.','T'] → '.' appears 1 time, 'T' appears 1 time</text>
+  <text x="470" y="810" class="code">Equal frequency, compare quality scores:</text>
+  <text x="470" y="825" class="code">'.' with quality 'I'(Q=40), 'T' with quality 'I'(Q=40)</text>
+  <text x="470" y="840" class="code">Equal quality, select first: '.' → All corrected to '.'</text>
+  <text x="470" y="855" class="code">AAGTCGATCGAA: Similar processing → All corrected to 'T'</text>
+
+  <!-- Arrow 5 -->
+  <line x1="250" y1="880" x2="250" y2="920" class="arrow"/>
+
+  <!-- Step 6: Output Assembly -->
+  <rect x="100" y="930" width="300" height="100" class="result-box"/>
+  <text x="250" y="960" text-anchor="middle" class="white-text subtitle">Step 6: Output Assembly</text>
+  <text x="250" y="980" text-anchor="middle" class="white-text small-text">Reassemble mpileup line</text>
+  <text x="250" y="995" text-anchor="middle" class="white-text small-text">Update depth, sequence, quality, UMI</text>
+
+  <!-- Example for Step 6 -->
+  <rect x="450" y="930" width="500" height="100" class="example-box"/>
+  <text x="470" y="950" class="small-text">Example: Final output</text>
+  <text x="470" y="965" class="code">Depth: 2 (two different UMIs)</text>
+  <text x="470" y="980" class="code">Base sequence: ".T" (corrected base for each UMI)</text>
+  <text x="470" y="995" class="code">Quality scores: "II" (representative quality for each UMI)</text>
+  <text x="470" y="1010" class="code">UMI: "AAGTCGATCGAT,AAGTCGATCGAA"</text>
+
+  <!-- Final Output -->
+  <rect x="50" y="1060" width="1300" height="80" class="example-box"/>
+  <text x="70" y="1085" class="subtitle">Final Output:</text>
+  <text x="70" y="1105" class="code">chr1  46930353  C  2  .T  II  AAGTCGATCGAT,AAGTCGATCGAA</text>
+  <text x="70" y="1125" class="small-text">Note: Depth reduced from 5 to 2, as only 2 different UMIs are retained</text>
+
+  <!-- Key Points -->
+  <rect x="50" y="1270" width="1300" height="200" class="box"/>
+  <text x="70" y="1295" class="subtitle">Key Points:</text>
+  
+  <text x="70" y="1320" class="text">1. Length consistency check: Ensure base, quality, UMI arrays have identical lengths</text>
+  <text x="70" y="1340" class="text">2. Valid base filtering: Only retain methylation-relevant bases ('.'/'T' for C, ','/'a' for G)</text>
+  <text x="70" y="1360" class="text">3. UMI correction strategy: Merge when Hamming distance=1 and counts are unequal</text>
+  <text x="70" y="1380" class="text">4. Base correction strategy: Prioritize by frequency, then by average quality score if equal</text>
+  <text x="70" y="1400" class="text">5. Quality score conversion: Phred+33 encoding converted to numerical values for comparison</text>
+  <text x="70" y="1420" class="text">6. Output format: Maintain original mpileup format, but with corrected depth and content</text>
+  <text x="70" y="1440" class="text">7. Error handling: Skip correction when lengths mismatch, return original data with warning</text>
+
+  <!-- Algorithm Complexity -->
+  <rect x="50" y="1490" width="1300" height="120" class="box"/>
+  <text x="70" y="1515" class="subtitle">Algorithm Complexity:</text>
+  
+  <text x="70" y="1540" class="text">• Time complexity: O(n²) - where n is the number of unique UMIs (pairwise Hamming distance comparison)</text>
+  <text x="70" y="1560" class="text">• Space complexity: O(n×m) - where n is the number of UMIs, m is the number of reads per UMI</text>
+  <text x="70" y="1580" class="text">• Use case: UMI deduplication and error correction for single-cell methylation sequencing data</text>
+
+  <!-- Error Handling -->
+  <rect x="50" y="1630" width="1300" height="100" class="box"/>
+  <text x="70" y="1655" class="subtitle">Error Handling:</text>
+  
+  <text x="70" y="1680" class="text">• Length mismatch: Log warning, skip correction, return original data</text>
+  <text x="70" y="1700" class="text">• Unequal UMI lengths: Skip Hamming distance calculation to avoid ValueError</text>
+  <text x="70" y="1720" class="text">• Empty data handling: Set all fields to empty or 0 when no valid UMIs exist</text>
+
+   <!-- Performance Notes -->
+   <rect x="50" y="1750" width="1300" height="120" class="box"/>
+   <text x="70" y="1775" class="subtitle">Performance Notes:</text>
+   
+   <text x="70" y="1800" class="text">• Debug logging: Detailed correction process viewable through log.debug</text>
+   <text x="70" y="1820" class="text">• Memory optimization: Use defaultdict and Counter to reduce memory allocation</text>
+   <text x="70" y="1840" class="text">• Parallel processing: Function can process different genomic regions in parallel multiprocessing environment</text>
+   <text x="70" y="1860" class="text">• Large-scale data ready: Designed to handle millions of methylation sites</text>
+
+</svg>

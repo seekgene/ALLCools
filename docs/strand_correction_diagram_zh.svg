@@ -1,0 +1,115 @@
+<svg width="1200" height="900" xmlns="http://www.w3.org/2000/svg">
+  <!-- 标题 -->
+  <text x="600" y="30" text-anchor="middle" font-size="24" font-weight="bold" fill="#2c3e50">
+    ALLCools链方向修正机制对比
+  </text>
+  
+  <!-- 原始DNA双链结构 -->
+  <g transform="translate(50, 60)">
+    <rect x="0" y="0" width="1100" height="80" fill="#f8f9fa" stroke="#6c757d" stroke-width="2" rx="5"/>
+    <text x="20" y="25" font-size="16" font-weight="bold" fill="#2c3e50">原始DNA双链结构</text>
+    <text x="20" y="45" font-size="14" font-family="monospace" fill="#e74c3c">
+      5'-ATCGATCG-3'  (正链, C→T转换后: ATCGATCG → ATTGATTG)
+    </text>
+    <text x="20" y="65" font-size="14" font-family="monospace" fill="#3498db">
+      3'-TAGCTAGC-5'  (负链, G→A转换后: TAGCTAGC → TAACTAGC)
+    </text>
+  </g>
+  
+  <!-- Bismark处理方式 -->
+  <g transform="translate(50, 170)">
+    <rect x="0" y="0" width="530" height="200" fill="#ffe6e6" stroke="#dc3545" stroke-width="2" rx="5"/>
+    <text x="20" y="25" font-size="16" font-weight="bold" fill="#dc3545">Bismark处理方式</text>
+    
+    <text x="20" y="50" font-size="12" font-weight="bold" fill="#2c3e50">强制链方向分配:</text>
+    <text x="20" y="70" font-size="12" fill="#e74c3c">• C→T转换reads → 强制映射到正链 (+)</text>
+    <text x="20" y="85" font-size="12" fill="#3498db">• G→A转换reads → 强制映射到负链 (-)</text>
+    
+    <text x="20" y="110" font-size="12" font-weight="bold" fill="#2c3e50">标签标记:</text>
+    <text x="20" y="130" font-size="11" font-family="monospace" fill="#495057">XG="CT" → C→T转换</text>
+    <text x="20" y="145" font-size="11" font-family="monospace" fill="#495057">XG="GA" → G→A转换</text>
+    
+    <text x="20" y="170" font-size="12" font-weight="bold" fill="#28a745">优点:</text>
+    <text x="20" y="185" font-size="11" fill="#495057">链方向一致，分析简单</text>
+  </g>
+  
+  <!-- Hisat-3n处理方式 -->
+  <g transform="translate(620, 170)">
+    <rect x="0" y="0" width="530" height="200" fill="#e6f3ff" stroke="#007bff" stroke-width="2" rx="5"/>
+    <text x="20" y="25" font-size="16" font-weight="bold" fill="#007bff">Hisat-3n处理方式</text>
+    
+    <text x="20" y="50" font-size="12" font-weight="bold" fill="#2c3e50">保持原始方向:</text>
+    <text x="20" y="70" font-size="12" fill="#495057">• R1/R2保持原始mapping方向</text>
+    <text x="20" y="85" font-size="12" fill="#495057">• 同一转换类型可能有不同链方向</text>
+    
+    <text x="20" y="110" font-size="12" font-weight="bold" fill="#2c3e50">标签标记:</text>
+    <text x="20" y="130" font-size="11" font-family="monospace" fill="#495057">YZ="+" → C→T转换</text>
+    <text x="20" y="145" font-size="11" font-family="monospace" fill="#495057">YZ="-" → G→A转换</text>
+    
+    <text x="20" y="170" font-size="12" font-weight="bold" fill="#ffc107">问题:</text>
+    <text x="20" y="185" font-size="11" fill="#495057">链方向不一致，分析复杂</text>
+  </g>
+  
+  <!-- 箭头 -->
+  <path d="M 600 390 L 600 430" stroke="#28a745" stroke-width="4" marker-end="url(#arrowhead)" fill="none"/>
+  
+  <!-- ALLCools解决方案 -->
+  <g transform="translate(50, 450)">
+    <rect x="0" y="0" width="1100" height="180" fill="#e8f5e8" stroke="#28a745" stroke-width="3" rx="5"/>
+    <text x="20" y="25" font-size="18" font-weight="bold" fill="#28a745">ALLCools统一链方向解决方案</text>
+    
+    <text x="20" y="55" font-size="14" font-weight="bold" fill="#2c3e50">_convert_bam_strandness函数逻辑:</text>
+    
+    <g transform="translate(20, 70)">
+      <rect x="0" y="0" width="1060" height="90" fill="#f8f9fa" stroke="#6c757d" stroke-width="1" rx="3"/>
+      <text x="10" y="20" font-size="12" font-family="monospace" fill="#495057">
+        if read.has_tag("YZ"):  # Hisat-3n
+      </text>
+      <text x="30" y="35" font-size="12" font-family="monospace" fill="#495057">
+        is_ct_func = _is_read_ct_conversion_hisat3n
+      </text>
+      <text x="10" y="50" font-size="12" font-family="monospace" fill="#495057">
+        elif read.has_tag("XG"):  # Bismark
+      </text>
+      <text x="30" y="65" font-size="12" font-family="monospace" fill="#495057">
+        is_ct_func = _is_read_ct_conversion_bismark
+      </text>
+      <text x="10" y="80" font-size="12" font-family="monospace" fill="#28a745">
+        # 统一设置: C→T转换→正链(+), G→A转换→负链(-)
+      </text>
+    </g>
+  </g>
+  
+  <!-- 箭头 -->
+  <path d="M 600 650 L 600 690" stroke="#6f42c1" stroke-width="4" marker-end="url(#arrowhead2)" fill="none"/>
+  
+  <!-- 对mpileup分析的影响 -->
+  <g transform="translate(50, 710)">
+    <rect x="0" y="0" width="1100" height="140" fill="#f3e5f5" stroke="#6f42c1" stroke-width="2" rx="5"/>
+    <text x="20" y="25" font-size="16" font-weight="bold" fill="#6f42c1">统一后对mpileup分析的影响</text>
+    
+    <g transform="translate(20, 40)">
+      <text x="0" y="20" font-size="14" font-weight="bold" fill="#2c3e50">C位点分析 (参考碱基=C):</text>
+      <text x="20" y="40" font-size="12" fill="#e74c3c">• 只统计正链reads: "." (未甲基化), "T" (甲基化)</text>
+      
+      <text x="500" y="20" font-size="14" font-weight="bold" fill="#2c3e50">G位点分析 (参考碱基=G):</text>
+      <text x="520" y="40" font-size="12" fill="#3498db">• 只统计负链reads: "," (未甲基化), "a" (甲基化)</text>
+      
+      <text x="0" y="70" font-size="13" font-weight="bold" fill="#28a745">优势:</text>
+      <text x="60" y="70" font-size="12" fill="#495057">兼容多种比对工具 | 统一分析流程 | 自动检测处理 | 保持数据完整性</text>
+      
+      <text x="0" y="95" font-size="13" font-weight="bold" fill="#dc3545">注意:</text>
+      <text x="60" y="95" font-size="12" fill="#495057">需要转换标签(XG/YZ) | 增加处理步骤 | 仅支持Bismark和Hisat-3n</text>
+    </g>
+  </g>
+  
+  <!-- 箭头标记定义 -->
+  <defs>
+    <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#28a745"/>
+    </marker>
+    <marker id="arrowhead2" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
+      <polygon points="0 0, 12 4, 0 8" fill="#6f42c1"/>
+    </marker>
+  </defs>
+</svg>
