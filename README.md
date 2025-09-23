@@ -27,9 +27,7 @@ ALLCools is a comprehensive toolkit for single-cell methylation data analysis. I
 We have implemented significant improvements to the `bam-to-allc` conversion process:
 
 #### UMI Correction Algorithm
-- **Enhanced UMI deduplication**: Improved algorithm for more accurate UMI-based duplicate removal
-- **Memory optimization**: Reduced memory footprint for large-scale data processing
-- **Performance improvements**: Faster processing speed with optimized data structures
+- **Enhanced UMI deduplication**: Added function to deduplication based on UMI tag
 
 #### Technical Details
 For detailed information about our UMI correction workflow, please refer to the comprehensive diagram:
