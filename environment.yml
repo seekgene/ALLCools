@@ -31,6 +31,7 @@ dependencies:
     - xarray
     - yaml
     - zarr
+    - samtools
     - pip:
           - papermill
           - imblearn
