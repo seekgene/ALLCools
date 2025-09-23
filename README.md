@@ -66,8 +66,28 @@ This optimization reduces noise in the mpileup output and focuses on the essenti
 
 ## Installation
 
-Please refer to the [official documentation](https://lhqing.github.io/ALLCools/intro.html) for detailed installation instructions.
+### Prerequisites
 
+Before installing ALLCools, ensure you have the following system requirements:
+- Python 3.8 or higher
+- Git (for cloning the repository)
+
+### Method 1: Install from Source (Recommended for Seekgene Fork)
+
+Since this is a forked version with Seekgene-specific modifications, we recommend installing from source:
+
+```bash
+# Clone the Seekgene fork
+git clone https://github.com/seekgene/ALLCools.git
+cd ALLCools
+
+# Create and activate a conda environment (recommended)
+conda env create -f environment.yml
+conda activate allcools_dev
+
+# Install ALLCools
+pip install .
+```
 ## Documentation
 
 Complete usage documentation is available at: [https://lhqing.github.io/ALLCools/intro.html](https://lhqing.github.io/ALLCools/intro.html)
