@@ -77,7 +77,7 @@ Complete usage documentation is available at: [https://lhqing.github.io/ALLCools
 ### v1.2.0 (Current Version - Seekgene Fork)
 - Updated project version to 1.2.0
 - **Enhanced bam-to-allc functionality**:
-  - Improved UMI correction algorithm performance
+  - Added UMI-based error correction and deduplication
   - Added comprehensive UMI workflow documentation
 
 ### v1.1.1 (Original)
