@@ -54,13 +54,13 @@ This diagram illustrates:
 **Optimized samtools mpileup Parameters:**
 We have enhanced the mpileup command with additional parameters to fix mpileup output:
 ```bash
---no-output-ins-mods --no-output-ins --no-output-del --no-output-ends
+--no-output-ins-mods --no-output-ins --no-output-ins --no-output-del --no-output-del --no-output-ends
 ```
 These parameters:
-- `--no-output-ins-mods`: Suppress insertion modification output
-- `--no-output-ins`: Suppress insertion output (applied twice for emphasis)
-- `--no-output-del`: Suppress deletion output (applied twice for emphasis)  
-- `--no-output-ends`: Suppress read end information output
+- `--no-output-ins-mods`: don't display base modifications within insertions.
+- `--no-output-ins`: skip insertion sequence after +NUM. Use twice for complete insertion removal.
+- `--no-output-del`: skip deletion sequence after -NUM. Use twice for complete deletion removal.
+- `--no-output-ends`: remove ^MQUAL and $ markup in sequence column.
 
 This optimization reduces noise in the mpileup output and focuses on the essential methylation information.
 
