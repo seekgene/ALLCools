@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1400" height="1800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; fill: #2c3e50; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #34495e; }
+      .text { font-family: Arial, sans-serif; font-size: 14px; fill: #2c3e50; }
+      .small-text { font-family: Arial, sans-serif; font-size: 12px; fill: #7f8c8d; }
+      .code { font-family: 'Courier New', monospace; font-size: 12px; fill: #e74c3c; }
+      .box { fill: #ecf0f1; stroke: #bdc3c7; stroke-width: 2; rx: 8; }
+      .process-box { fill: #3498db; stroke: #2980b9; stroke-width: 2; rx: 8; }
+      .decision-box { fill: #f39c12; stroke: #e67e22; stroke-width: 2; rx: 8; }
+      .result-box { fill: #2ecc71; stroke: #27ae60; stroke-width: 2; rx: 8; }
+      .example-box { fill: #f8f9fa; stroke: #6c757d; stroke-width: 1; rx: 5; }
+      .arrow { stroke: #34495e; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .white-text { fill: white; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="700" y="40" text-anchor="middle" class="title">UMI矫正详细流程图 (UMI Correction Detailed Workflow)</text>
+  
+  <!-- Input Data Example -->
+  <rect x="50" y="70" width="1300" height="120" class="example-box"/>
+  <text x="70" y="95" class="subtitle">输入数据示例 (Input Data Example):</text>
+  <text x="70" y="115" class="code">chr1  46930353  C  5  .T.T,  IIHII  AAGTCGATCGAT,AAGTCGATCGAA,AAGTCGATCGAT,AAGTCGATCGAA,AAGTCGATCGAC</text>
+  <text x="70" y="135" class="small-text">列说明: 染色体 位置 参考碱基 深度 碱基序列 质量分数 UMI序列(逗号分隔)</text>
+  <text x="70" y="155" class="small-text">Columns: chromosome position ref_base depth base_sequence quality_scores UMI_sequences(comma-separated)</text>
+  <text x="70" y="175" class="small-text">注意: 只有'.'和'T'(对C)或','和'a'(对G)的碱基会被保留用于甲基化分析</text>
+
+  <!-- Step 1: Input Validation -->
+  <rect x="100" y="220" width="300" height="80" class="process-box"/>
+  <text x="250" y="250" text-anchor="middle" class="white-text subtitle">步骤1: 输入验证</text>
+  <text x="250" y="270" text-anchor="middle" class="white-text text">Input Validation</text>
+  <text x="250" y="285" text-anchor="middle" class="white-text small-text">检查字段数量和长度一致性</text>
+
+  <!-- Example for Step 1 -->
+  <rect x="450" y="220" width="400" height="80" class="example-box"/>
+  <text x="470" y="240" class="small-text">示例: 验证base、quality、UMI长度</text>
+  <text x="470" y="255" class="code">bases: ['.','T','.','T',','] → 5个</text>
+  <text x="470" y="270" class="code">quals: ['I','I','H','I','I'] → 5个</text>
+  <text x="470" y="285" class="code">umis: ['AAGTCGATCGAT','AAGTCGATCGAA',...] → 5个</text>
+
+  <!-- Arrow 1 -->
+  <line x1="250" y1="300" x2="250" y2="340" class="arrow"/>
+
+  <!-- Step 2: Filter Valid Bases -->
+  <rect x="100" y="350" width="300" height="80" class="process-box"/>
+  <text x="250" y="380" text-anchor="middle" class="white-text subtitle">步骤2: 过滤有效碱基</text>
+  <text x="250" y="400" text-anchor="middle" class="white-text text">Filter Valid Bases</text>
+  <text x="250" y="415" text-anchor="middle" class="white-text small-text">保留'.'和'T'(C位点)或','和'a'(G位点)</text>
+
+  <!-- Example for Step 2 -->
+  <rect x="450" y="350" width="500" height="80" class="example-box"/>
+  <text x="470" y="370" class="small-text">示例: 对于参考碱基C，过滤有效碱基</text>
+  <text x="470" y="385" class="code">原始: ['.','T','.','T',','] → 保留索引: [0,1,2,3]</text>
+  <text x="470" y="400" class="code">过滤后bases: ['.','T','.','T']</text>
+  <text x="470" y="415" class="code">对应UMIs: ['AAGTCGATCGAT','AAGTCGATCGAA','AAGTCGATCGAT','AAGTCGATCGAA']</text>
+
+  <!-- Arrow 2 -->
+  <line x1="250" y1="430" x2="250" y2="470" class="arrow"/>
+
+  <!-- Step 3: Group by UMI -->
+  <rect x="100" y="480" width="300" height="80" class="process-box"/>
+  <text x="250" y="510" text-anchor="middle" class="white-text subtitle">步骤3: 按UMI分组</text>
+  <text x="250" y="530" text-anchor="middle" class="white-text text">Group by UMI</text>
+  <text x="250" y="545" text-anchor="middle" class="white-text small-text">统计每个UMI的出现次数和对应数据</text>
+
+  <!-- Example for Step 3 -->
+  <rect x="450" y="480" width="500" height="80" class="example-box"/>
+  <text x="470" y="500" class="small-text">示例: UMI分组结果</text>
+  <text x="470" y="515" class="code">AAGTCGATCGAT: count=2, bases=['.','T'], quals=['I','I']</text>
+  <text x="470" y="530" class="code">AAGTCGATCGAA: count=2, bases=['T','.'], quals=['I','I']</text>
+  <text x="470" y="545" class="code">unique_umis = ['AAGTCGATCGAT', 'AAGTCGATCGAA']</text>
+
+  <!-- Arrow 3 -->
+  <line x1="250" y1="560" x2="250" y2="600" class="arrow"/>
+
+  <!-- Step 4: UMI Correction (Hamming Distance) -->
+  <rect x="100" y="610" width="300" height="100" class="decision-box"/>
+  <text x="250" y="640" text-anchor="middle" class="white-text subtitle">步骤4: UMI矫正</text>
+  <text x="250" y="660" text-anchor="middle" class="white-text text">UMI Correction</text>
+  <text x="250" y="675" text-anchor="middle" class="white-text small-text">汉明距离=1的UMI合并</text>
+  <text x="250" y="690" text-anchor="middle" class="white-text small-text">高频UMI吸收低频UMI</text>
+
+  <!-- Example for Step 4 -->
+  <rect x="450" y="610" width="500" height="100" class="example-box"/>
+  <text x="470" y="630" class="small-text">示例: 汉明距离计算</text>
+  <text x="470" y="645" class="code">AAGTCGATCGAT vs AAGTCGATCGAA</text>
+  <text x="470" y="660" class="code">差异位置: 第11位 T≠A → 汉明距离=1</text>
+  <text x="470" y="675" class="code">count相等(2=2) → 保持分离，不合并</text>
+  <text x="470" y="690" class="code">如果count不等，高频吸收低频</text>
+
+  <!-- Arrow 4 -->
+  <line x1="250" y1="710" x2="250" y2="750" class="arrow"/>
+
+  <!-- Step 5: Base Correction -->
+  <rect x="100" y="760" width="300" height="120" class="decision-box"/>
+  <text x="250" y="790" text-anchor="middle" class="white-text subtitle">步骤5: 碱基矫正</text>
+  <text x="250" y="810" text-anchor="middle" class="white-text text">Base Correction</text>
+  <text x="250" y="825" text-anchor="middle" class="white-text small-text">每个UMI内部碱基一致性矫正</text>
+  <text x="250" y="840" text-anchor="middle" class="white-text small-text">1. 按频次选择</text>
+  <text x="250" y="855" text-anchor="middle" class="white-text small-text">2. 频次相等时按质量分数选择</text>
+
+  <!-- Example for Step 5 -->
+  <rect x="450" y="760" width="500" height="120" class="example-box"/>
+  <text x="470" y="780" class="small-text">示例: UMI内碱基矫正</text>
+  <text x="470" y="795" class="code">AAGTCGATCGAT: bases=['.','T'] → '.'出现1次, 'T'出现1次</text>
+  <text x="470" y="810" class="code">频次相等，比较质量分数:</text>
+  <text x="470" y="825" class="code">'.' 对应质量'I'(Q=40), 'T'对应质量'I'(Q=40)</text>
+  <text x="470" y="840" class="code">质量相等，选择第一个: '.' → 矫正后全部为'.'</text>
+  <text x="470" y="855" class="code">AAGTCGATCGAA: 类似处理 → 矫正后全部为'T'</text>
+
+  <!-- Arrow 5 -->
+  <line x1="250" y1="880" x2="250" y2="920" class="arrow"/>
+
+  <!-- Step 6: Output Assembly -->
+  <rect x="100" y="930" width="300" height="100" class="result-box"/>
+  <text x="250" y="960" text-anchor="middle" class="white-text subtitle">步骤6: 输出组装</text>
+  <text x="250" y="980" text-anchor="middle" class="white-text text">Output Assembly</text>
+  <text x="250" y="995" text-anchor="middle" class="white-text small-text">重新组装mpileup行</text>
+  <text x="250" y="1010" text-anchor="middle" class="white-text small-text">更新深度、序列、质量、UMI</text>
+
+  <!-- Example for Step 6 -->
+  <rect x="450" y="930" width="500" height="100" class="example-box"/>
+  <text x="470" y="950" class="small-text">示例: 最终输出</text>
+  <text x="470" y="965" class="code">深度: 2 (两个不同UMI)</text>
+  <text x="470" y="980" class="code">碱基序列: ".T" (每个UMI的矫正碱基)</text>
+  <text x="470" y="995" class="code">质量分数: "II" (每个UMI的代表质量)</text>
+  <text x="470" y="1010" class="code">UMI: "AAGTCGATCGAT,AAGTCGATCGAA"</text>
+
+  <!-- Final Output -->
+  <rect x="50" y="1060" width="1300" height="80" class="example-box"/>
+  <text x="70" y="1085" class="subtitle">最终输出 (Final Output):</text>
+  <text x="70" y="1105" class="code">chr1  46930353  C  2  .T  II  AAGTCGATCGAT,AAGTCGATCGAA</text>
+  <text x="70" y="1125" class="small-text">注意: 深度从5减少到2，因为只保留了2个不同的UMI</text>
+
+  <!-- Key Points -->
+  <rect x="50" y="1270" width="1300" height="200" class="box"/>
+  <text x="70" y="1295" class="subtitle">关键要点 (Key Points):</text>
+  
+  <text x="70" y="1320" class="text">1. 长度一致性检查: 确保base、quality、UMI三者长度完全一致</text>
+  <text x="70" y="1340" class="text">2. 有效碱基过滤: 只保留甲基化相关的碱基('.'/'T'对C, ','/'a'对G)</text>
+  <text x="70" y="1360" class="text">3. UMI矫正策略: 汉明距离=1且频次不等时进行合并</text>
+  <text x="70" y="1380" class="text">4. 碱基矫正策略: 优先按频次，频次相等时按平均质量分数</text>
+  <text x="70" y="1400" class="text">5. 质量分数转换: Phred+33编码转换为数值进行比较</text>
+  <text x="70" y="1420" class="text">6. 输出格式: 保持原始mpileup格式，但深度和内容已矫正</text>
+  <text x="70" y="1440" class="text">7. 错误处理: 长度不一致时跳过矫正，返回原始数据并记录警告</text>
+
+  <!-- Algorithm Complexity -->
+  <rect x="50" y="1490" width="1300" height="120" class="box"/>
+  <text x="70" y="1515" class="subtitle">算法复杂度 (Algorithm Complexity):</text>
+  
+  <text x="70" y="1540" class="text">• 时间复杂度: O(n²) - 其中n为唯一UMI数量(UMI两两比较汉明距离)</text>
+  <text x="70" y="1560" class="text">• 空间复杂度: O(n×m) - 其中n为UMI数量，m为每个UMI对应的reads数量</text>
+  <text x="70" y="1580" class="text">• 适用场景: 单细胞甲基化测序数据的UMI去重和错误矫正</text>
+
+  <!-- Error Handling -->
+  <rect x="50" y="1630" width="1300" height="100" class="box"/>
+  <text x="70" y="1655" class="subtitle">错误处理 (Error Handling):</text>
+  
+  <text x="70" y="1680" class="text">• 长度不匹配: 记录警告日志，跳过矫正，返回原始数据</text>
+  <text x="70" y="1700" class="text">• UMI长度不等: 跳过汉明距离计算，避免ValueError</text>
+  <text x="70" y="1720" class="text">• 空数据处理: 当没有有效UMI时，设置所有字段为空或0</text>
+
+   <!-- Performance Notes -->
+   <rect x="50" y="1750" width="1300" height="120" class="box"/>
+   <text x="70" y="1775" class="subtitle">性能说明 (Performance Notes):</text>
+   
+   <text x="70" y="1800" class="text">• 调试日志: 可通过log.debug查看详细的矫正过程</text>
+   <text x="70" y="1820" class="text">• 内存优化: 使用defaultdict和Counter减少内存分配</text>
+   <text x="70" y="1840" class="text">• 并行处理: 该函数可在多进程环境中并行处理不同的基因组区域</text>
+   <text x="70" y="1860" class="text">• 适合大规模数据: 设计用于处理百万级别的甲基化位点</text>
+
+</svg>
