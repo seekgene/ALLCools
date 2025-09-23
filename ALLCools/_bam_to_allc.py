@@ -134,17 +134,13 @@ def hamming_distance(str1, str2):
         raise ValueError("Strings must be of equal length.")
     return sum(ch1 != ch2 for ch1, ch2 in zip(str1, str2))
 
-def phred33_to_quality(ascii_char):
-    """Convert Phred+33 ASCII character to quality score"""
-    return ord(ascii_char) - 33
 
 def correct_tag(mpileup_line, ref_base):
-    """Correct UMI in mpileup output.
+    """Correct UMI in mpileup output - optimized version.
     Input will like:
     chr1    46930353        C       1       ,       I       GAAGGTGTGTAT
     chr1    46930354        C       1       ,       I       GAAGGTGTGTAT
-    chr1    46930355        C       1       ,$      I       GAAGGTGTGTAT
-    chr1    47151364        C       1       ^9T     I       TTATATGGGGAG
+    chr1    47151364        C       1       T     I       TTATATGGGGAG
     chr1    47791302        C       2       TT      II      TGGTTGAGTGTG,GTAGTGTTTGAG
     ...
     column 1 is chromosome
@@ -163,16 +159,19 @@ def correct_tag(mpileup_line, ref_base):
     
     # when ref base is C, just extract seq is . or T pos info
     # when ref base is G, just extract seq is , or a pos info
-    seqs = list(mpileup_fields[4])  # Each character is a base
+    seqs = mpileup_fields[4]  # Keep as string for faster operations
     if ref_base == "C":
-        keep_indice = [i for i in range(len(seqs)) if seqs[i] in [".", "T"]]
+        valid_chars = {".", "T"}
     elif ref_base == "G":
-        keep_indice = [i for i in range(len(seqs)) if seqs[i] in [",", "a"]]
+        valid_chars = {",", "a"}
     else:
         return mpileup_line  # Skip if not C or G
     
+    # Find valid positions using list comprehension for better performance
+    keep_indices = [i for i, char in enumerate(seqs) if char in valid_chars]
+    
     # If no valid positions found, return empty result
-    if not keep_indice:
+    if not keep_indices:
         mpileup_fields[3] = "0"  # Set coverage to 0
         mpileup_fields[4] = ""   # Empty sequence
         mpileup_fields[5] = ""   # Empty quality
@@ -181,7 +180,7 @@ def correct_tag(mpileup_line, ref_base):
     
     # The last field records UMIs, each UMI is separated by comma
     umis = mpileup_fields[-1].split(",")
-    quals = list(mpileup_fields[5])  # Each character is a quality score
+    quals = mpileup_fields[5]  # Keep as string
     
     # Check length consistency before UMI correction
     if len(seqs) != len(quals) or len(seqs) != len(umis):
@@ -190,54 +189,60 @@ def correct_tag(mpileup_line, ref_base):
                    f"Skipping UMI correction for this position.")
         return mpileup_line  # Return original if inconsistent
     
-    # Additional check: verify one-to-one correspondence
-    log.debug(f"Position {mpileup_fields[0]}:{mpileup_fields[1]} - "
-             f"Base-Quality-UMI correspondence verified: "
-             f"bases={len(seqs)}, qualities={len(quals)}, UMIs={len(umis)}")
+    # Filter using indices - more efficient than multiple list comprehensions
+    filtered_umis = [umis[i] for i in keep_indices]
+    filtered_quals = [quals[i] for i in keep_indices]
+    filtered_seqs = [seqs[i] for i in keep_indices]
     
-    umis = [umis[i] for i in keep_indice]
-    quals = [quals[i] for i in keep_indice]
-    seqs = [seqs[i] for i in keep_indice]
+    # Count UMIs using Counter for efficiency
+    umi_count = collections.Counter(filtered_umis)
     
-    # Count UMIs
-    umi_count = collections.Counter(umis)
-    
-    # Initialize umi_dict with all UMIs and their corresponding sequences and qualities
-    umi_dict = collections.defaultdict(lambda: {"qual": [], "seq": []})
-    for i, umi in enumerate(umis):
-        umi_dict[umi]["qual"].append(quals[i])
-        umi_dict[umi]["seq"].append(seqs[i])
-    
-    # Get unique UMIs for correction
-    unique_umis = list(umi_dict.keys())
+    # Group data by UMI more efficiently
+    umi_dict = {}
+    for i, umi in enumerate(filtered_umis):
+        if umi not in umi_dict:
+            umi_dict[umi] = {"qual": [], "seq": []}
+        umi_dict[umi]["qual"].append(filtered_quals[i])
+        umi_dict[umi]["seq"].append(filtered_seqs[i])
     
     # UMI correction: merge UMIs with hamming distance of 1
-    for i in range(len(unique_umis)):
-        for j in range(i+1, len(unique_umis)):
-            umi1, umi2 = unique_umis[i], unique_umis[j]
-            # Skip if either UMI has been merged already
-            if umi1 not in umi_dict or umi2 not in umi_dict:
+    unique_umis = list(umi_dict.keys())
+    
+    i = 0
+    while i < len(unique_umis):
+        umi1 = unique_umis[i]
+        if umi1 not in umi_dict:  # Already merged
+            i += 1
+            continue
+            
+        j = i + 1
+        while j < len(unique_umis):
+            umi2 = unique_umis[j]
+            if umi2 not in umi_dict:  # Already merged
+                j += 1
                 continue
             
-            try:
-                if hamming_distance(umi1, umi2) == 1:
-                    if umi_count[umi1] > umi_count[umi2]:
-                        # Merge umi2 into umi1
-                        umi_dict[umi1]["qual"].extend(umi_dict[umi2]["qual"])
-                        umi_dict[umi1]["seq"].extend(umi_dict[umi2]["seq"])
-                        del umi_dict[umi2]
-                    elif umi_count[umi1] < umi_count[umi2]:
-                        # Merge umi1 into umi2
-                        umi_dict[umi2]["qual"].extend(umi_dict[umi1]["qual"])
-                        umi_dict[umi2]["seq"].extend(umi_dict[umi1]["seq"])
-                        del umi_dict[umi1]
-                    # If counts are equal, keep both UMIs separate
-            except ValueError:
-                # Handle UMIs of different lengths
-                continue
+            if len(umi1) == len(umi2):
+                try:
+                    if hamming_distance(umi1, umi2) == 1:
+                        if umi_count[umi1] > umi_count[umi2]:
+                            # Merge umi2 into umi1
+                            umi_dict[umi1]["qual"].extend(umi_dict[umi2]["qual"])
+                            umi_dict[umi1]["seq"].extend(umi_dict[umi2]["seq"])
+                            del umi_dict[umi2]
+                        elif umi_count[umi1] < umi_count[umi2]:
+                            # Merge umi1 into umi2
+                            umi_dict[umi2]["qual"].extend(umi_dict[umi1]["qual"])
+                            umi_dict[umi2]["seq"].extend(umi_dict[umi1]["seq"])
+                            del umi_dict[umi1]
+                            break
+                        # If counts are equal, keep both UMIs separate
+                except ValueError:
+                    pass  
+            j += 1
+        i += 1
     
     # Base correction for each UMI
-    umis_to_delete = []
     for umi, info in umi_dict.items():
         seq_counts = collections.Counter(info["seq"])
         if len(seq_counts) > 1:
@@ -254,14 +259,14 @@ def correct_tag(mpileup_line, ref_base):
             else:
                 # Tie in counts, decide by quality scores
                 base_quality_map = {}
-                for i, (seq, qual) in enumerate(zip(info["seq"], info["qual"])):
+                for seq, qual in zip(info["seq"], info["qual"]):
                     if seq in tied_bases:
                         if seq not in base_quality_map:
                             base_quality_map[seq] = []
-                        base_quality_map[seq].append(phred33_to_quality(qual))
+                        base_quality_map[seq].append(ord(qual) - 33) 
                 
                 # Calculate average quality for each tied base
-                best_base = None
+                best_base = most_common_base  # Default fallback
                 best_avg_quality = -1
                 for base, qualities in base_quality_map.items():
                     avg_quality = sum(qualities) / len(qualities)
@@ -269,15 +274,10 @@ def correct_tag(mpileup_line, ref_base):
                         best_avg_quality = avg_quality
                         best_base = base
                 
-                corrected_base = best_base if best_base else most_common_base
+                corrected_base = best_base
             
             # Apply correction: replace all bases with the corrected base
             info["seq"] = [corrected_base] * len(info["seq"])
-    
-    # Remove problematic UMIs
-    for umi in umis_to_delete:
-        if umi in umi_dict:
-            del umi_dict[umi]
     
     # Reassemble mpileup fields
     if not umi_dict:
@@ -289,9 +289,11 @@ def correct_tag(mpileup_line, ref_base):
     else:
         # Update coverage count
         mpileup_fields[3] = str(len(umi_dict))
-        mpileup_fields[-1] = ",".join(umi_dict.keys())
-        mpileup_fields[4] = "".join([info["seq"][0] for umi, info in umi_dict.items()])
-        mpileup_fields[5] = "".join([info["qual"][0] for umi, info in umi_dict.items()])
+        # Use join for better performance than string concatenation
+        umi_keys = list(umi_dict.keys())
+        mpileup_fields[-1] = ",".join(umi_keys)
+        mpileup_fields[4] = "".join(umi_dict[umi]["seq"][0] for umi in umi_keys)
+        mpileup_fields[5] = "".join(umi_dict[umi]["qual"][0] for umi in umi_keys)
     
     return "\t".join(mpileup_fields)
 
@@ -310,14 +312,16 @@ def _bam_to_allc_worker(
     tabix=True,
     save_count_df=False,
     tag=None,
+    debug=False,
 ):
     """None parallel bam_to_allc worker function, call by bam_to_allc."""
     # mpileup
     mpileup_params = None
+    mpileup_fix_output_param = "--no-output-ins-mods --no-output-ins --no-output-ins --no-output-del --no-output-del --no-output-ends "
     if tag:
         mpileup_params = f" --output-extra {tag} "
     if region is None:
-        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} {bam_path}"
+        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} {mpileup_fix_output_param} {bam_path}"
         pipes = subprocess.Popen(
             shlex.split(mpileup_cmd),
             stdout=subprocess.PIPE,
@@ -332,7 +336,7 @@ def _bam_to_allc_worker(
             include_header=True,
             samtools_parms_str=None,
         )
-        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} -"
+        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} {mpileup_fix_output_param} -"
         pipes = subprocess.Popen(
             shlex.split(mpileup_cmd),
             stdin=bam_handle.file,
@@ -363,7 +367,7 @@ def _bam_to_allc_worker(
     # process mpileup result
     for line in result_handle:
         total_line += 1
-        fields = line.split("\t")
+        fields = line.strip().split("\t")
         fields[2] = fields[2].upper()
         # if chrom changed, read whole chrom seq from fasta
         if fields[0] != cur_chrom:
@@ -374,73 +378,55 @@ def _bam_to_allc_worker(
 
         if fields[2] not in mc_sites:
             continue
-
+        
+        # Now we use --no-output-ins --no-output-ins --no-output-del --no-output-del to remove indel reads info
+        '''
         # deal with indels
         read_bases = fields[4]
-        incons_basecalls = read_bases.count("+") + read_bases.count("-")
-        if incons_basecalls > 0:
-            read_bases_no_indel = ""
-            # Track positions to keep for quality scores and UMI
-            positions_to_keep = []
-            index = 0
-            prev_index = 0
-            base_position = 0  # Position in the original sequence (excluding indel markers)
+        if "+" in read_bases or "-" in read_bases:
+            quals = fields[5] if len(fields) > 5 else ""
+            umis = fields[6].split(",") if len(fields) > 6 else []
+            keep_quals = []
+            keep_umis = []
+            read_bases_list = []
             
-            while index < len(read_bases):
-                if read_bases[index] == "+" or read_bases[index] == "-":
-                    # Add positions for bases before indel
-                    for i in range(prev_index, index):
-                        if read_bases[i] not in "+-0123456789":
-                            positions_to_keep.append(base_position)
-                            base_position += 1
+            i = 0
+            base_idx = 0  # Track actual base position for quals/umis alignment
+            
+            while i < len(read_bases):
+                char = read_bases[i]
+                if char in "+-":
+                    # Skip indel notation - find the number and skip that many characters
+                    i += 1
+                    if i < len(read_bases) and read_bases[i].isdigit():
+                        # Extract the full number (could be multi-digit)
+                        num_str = ""
+                        while i < len(read_bases) and read_bases[i].isdigit():
+                            num_str += read_bases[i]
+                            i += 1
+                        # Skip the indel sequence
+                        indel_len = int(num_str)
+                        i += indel_len
                     
-                    # get insert size
-                    indel_size = ""
-                    ind = index + 1
-                    while True:
-                        try:
-                            int(read_bases[ind])
-                            indel_size += read_bases[ind]
-                            ind += 1
-                        except Exception:
-                            break
-                    try:
-                        # sometimes +/- does not follow by a number and
-                        # it should be ignored
-                        indel_size = int(indel_size)
-                    except Exception:
-                        index += 1
-                        continue
-                    
-                    read_bases_no_indel += read_bases[prev_index:index]
-                    index = ind + indel_size
-                    prev_index = index
                 else:
-                    index += 1
+                    # Keep this base and its corresponding qual/umi
+                    read_bases_list.append(char)
+                    if base_idx < len(quals):
+                        keep_quals.append(quals[base_idx])
+                    if base_idx < len(umis):
+                        keep_umis.append(umis[base_idx])
+                    base_idx += 1
+                    i += 1
             
-            # Add remaining positions
-            for i in range(prev_index, index):
-                if read_bases[i] not in "+-0123456789":
-                    positions_to_keep.append(base_position)
-                    base_position += 1
-                    
-            read_bases_no_indel += read_bases[prev_index:index]
-            fields[4] = read_bases_no_indel
-            
-            # Update quality scores (fields[5]) and UMI (fields[6]) based on kept positions
-            if len(fields) > 5 and fields[5]:
-                quality_scores = fields[5]
-                new_quality_scores = "".join([quality_scores[i] for i in positions_to_keep if i < len(quality_scores)])
-                fields[5] = new_quality_scores
-                
-            if len(fields) > 6 and fields[6]:
-                umi_sequences = fields[6].strip().split(",")
-                new_umi_sequences = [umi_sequences[i] for i in positions_to_keep if i < len(umi_sequences)]
-                fields[6] = ",".join(new_umi_sequences)
-
+            # Update fields efficiently
+            fields[4] = "".join(read_bases_list)
+            fields[5] = "".join(keep_quals)
+            fields[6] = ",".join(keep_umis)
+        '''
         # count converted and unconverted bases
         if fields[2] == "C":
-            mpl_fh1.write(line)
+            if debug and mpl_fh1:
+                mpl_fh1.write(line)
             # mpileup pos is 1-based, turn into 0 based
             pos = int(fields[1]) - 1
             try:
@@ -450,7 +436,8 @@ def _bam_to_allc_worker(
             if tag and int(fields[3]) > 1:
                 fields = correct_tag("\t".join(fields), "C").split("\t")
                 new_line = "\t".join(fields)
-                mpl_fh2.write(f"{new_line}\n")
+                if debug and mpl_fh2:
+                    mpl_fh2.write(f"{new_line}\n")
             # Only count . and T, discard reads containing sequencing errors
             unconverted_c = fields[4].count(".")
             converted_c = fields[4].count("T")
@@ -477,7 +464,8 @@ def _bam_to_allc_worker(
                 cur_out_pos += len(data)
 
         elif fields[2] == "G":
-            mpl_fh1.write(line)
+            if debug and mpl_fh1:
+                mpl_fh1.write(line)
             pos = int(fields[1]) - 1
             try:
                 context = "".join(
@@ -491,7 +479,8 @@ def _bam_to_allc_worker(
             if tag and int(fields[3]) > 1:
                 fields = correct_tag("\t".join(fields), "G").split("\t")
                 new_line = "\t".join(fields)
-                mpl_fh2.write(f"{new_line}\n")
+                if debug and mpl_fh2:
+                    mpl_fh2.write(f"{new_line}\n")
             unconverted_c = fields[4].count(",")
             converted_c = fields[4].count("a")
             cov = unconverted_c + converted_c
@@ -572,6 +561,7 @@ def bam_to_allc(
     save_count_df=False,
     convert_bam_strandness=False,
     tag=None,
+    debug=False,
 ):
     """\
     Generate 1 ALLC file from 1 position sorted BAM file via samtools mpileup.
@@ -610,6 +600,9 @@ def bam_to_allc(
         'CB' for cell barcodes. When specified, the tag values will be included in the
         mpileup output and can be used for UMI-based error correction. For example,
         using 'UR' will enable UMI correction with 1 edit distance tolerance.
+    debug
+        If True, output debug files (mpl_fh1 and mpl_fh2) containing mpileup information.
+        Default is False.
 
     Returns
     -------
@@ -685,6 +678,8 @@ def bam_to_allc(
                     "compress_level": compress_level,
                     "tabix": False,
                     "save_count_df": False,
+                    "tag": tag,
+                    "debug": debug,
                 }
                 future_dict[executor.submit(_bam_to_allc_worker, **_kwargs)] = batch_id
 
@@ -743,7 +738,8 @@ def bam_to_allc(
             compress_level=compress_level,
             tabix=tabix,
             save_count_df=save_count_df,
-            tag = tag
+            tag=tag,
+            debug=debug
         )
 
         # clean up temp bam
