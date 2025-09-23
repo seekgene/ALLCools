@@ -31,7 +31,7 @@ We have implemented significant improvements to the `bam-to-allc` conversion pro
 
 #### Technical Details
 For detailed information about our UMI correction workflow, please refer to the comprehensive diagram:
-![UMI Correction Workflow](umi_correction_detailed_diagram_en.svg)
+![UMI Correction Workflow](./docs/umi_correction_detailed_diagram_en.svg)
 
 This diagram illustrates:
 - Input data processing steps
