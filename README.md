@@ -52,7 +52,7 @@ This diagram illustrates:
   - Generates `*_mpl_old.txt` and `*_mpl_correction.txt` files for analysis
 
 **Optimized samtools mpileup Parameters:**
-We have enhanced the mpileup command with additional parameters to improve data quality:
+We have enhanced the mpileup command with additional parameters to fix mpileup output:
 ```bash
 --no-output-ins-mods --no-output-ins --no-output-del --no-output-ends
 ```
