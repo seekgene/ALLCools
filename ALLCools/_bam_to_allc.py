@@ -155,7 +155,7 @@ def correct_tag(mpileup_line, ref_base):
     
     # Check if we have enough fields
     if len(mpileup_fields) < 7:
-        return mpileup_line
+        return mpileup_line, 0, 0
     
     # when ref base is C, just extract seq is . or T pos info
     # when ref base is G, just extract seq is , or a pos info
@@ -165,10 +165,11 @@ def correct_tag(mpileup_line, ref_base):
     elif ref_base == "G":
         valid_chars = {",", "a"}
     else:
-        return mpileup_line  # Skip if not C or G
+        return mpileup_line, 0, 0  # Skip if not C or G
     
     # Find valid positions using list comprehension for better performance
     keep_indices = [i for i, char in enumerate(seqs) if char in valid_chars]
+    cov_raw = len(keep_indices)
     
     # If no valid positions found, return empty result
     if not keep_indices:
@@ -176,7 +177,7 @@ def correct_tag(mpileup_line, ref_base):
         mpileup_fields[4] = ""   # Empty sequence
         mpileup_fields[5] = ""   # Empty quality
         mpileup_fields[-1] = "" # Empty UMI
-        return "\t".join(mpileup_fields)
+        return "\t".join(mpileup_fields), 0, 0
     
     # The last field records UMIs, each UMI is separated by comma
     umis = mpileup_fields[-1].split(",")
@@ -187,7 +188,7 @@ def correct_tag(mpileup_line, ref_base):
         log.warning(f"Length mismatch at {mpileup_fields[0]}:{mpileup_fields[1]} - "
                    f"seqs: {len(seqs)}, quals: {len(quals)}, umis: {len(umis)}. "
                    f"Skipping UMI correction for this position.")
-        return mpileup_line  # Return original if inconsistent
+        return mpileup_line, 0, 0  # Return original if inconsistent
     
     # Filter using indices - more efficient than multiple list comprehensions
     filtered_umis = [umis[i] for i in keep_indices]
@@ -294,8 +295,8 @@ def correct_tag(mpileup_line, ref_base):
         mpileup_fields[-1] = ",".join(umi_keys)
         mpileup_fields[4] = "".join(umi_dict[umi]["seq"][0] for umi in umi_keys)
         mpileup_fields[5] = "".join(umi_dict[umi]["qual"][0] for umi in umi_keys)
-    
-    return "\t".join(mpileup_fields)
+    cov_new = len(umi_dict)
+    return "\t".join(mpileup_fields), cov_raw, cov_new
 
 def _bam_to_allc_worker(
     bam_path,
@@ -362,10 +363,13 @@ def _bam_to_allc_worker(
     cur_out_pos = 0
     cov_dict = collections.defaultdict(int)  # context: cov_total
     mc_dict = collections.defaultdict(int)  # context: mc_total
+    num_dict = collections.defaultdict(int)  # context: context_number
     if debug:
         mpl_fh1 = open(f"{output_path.replace('.gz','')}_mpl_old.txt", "w")
         mpl_fh2 = open(f"{output_path.replace('.gz','')}_mpl_correction.txt", "w")
     # process mpileup result
+    total_cov_raw = 0
+    total_cov_new = 0
     for line in result_handle:
         total_line += 1
         fields = line.strip().split("\t")
@@ -435,8 +439,10 @@ def _bam_to_allc_worker(
             except Exception:  # complete context is not available, skip
                 continue
             if tag and int(fields[3]) > 1:
-                fields = correct_tag("\t".join(fields), "C").split("\t")
-                new_line = "\t".join(fields)
+                new_line, cov_raw, cov_new = correct_tag("\t".join(fields), "C")
+                fields = new_line.split("\t")
+                total_cov_raw += int(cov_raw)
+                total_cov_new += int(cov_new)
                 if debug and mpl_fh2:
                     mpl_fh2.write(f"{new_line}\n")
             # Only count . and T, discard reads containing sequencing errors
@@ -461,6 +467,7 @@ def _bam_to_allc_worker(
                 )
                 cov_dict[context] += cov
                 mc_dict[context] += unconverted_c
+                num_dict[context] += 1
                 out += data
                 cur_out_pos += len(data)
 
@@ -478,8 +485,10 @@ def _bam_to_allc_worker(
             except Exception:  # complete context is not available, skip
                 continue
             if tag and int(fields[3]) > 1:
-                fields = correct_tag("\t".join(fields), "G").split("\t")
-                new_line = "\t".join(fields)
+                new_line, cov_raw, cov_new = correct_tag("\t".join(fields), "G")
+                fields = new_line.split("\t")
+                total_cov_raw += int(cov_raw)
+                total_cov_new += int(cov_new)
                 if debug and mpl_fh2:
                     mpl_fh2.write(f"{new_line}\n")
             unconverted_c = fields[4].count(",")
@@ -503,6 +512,7 @@ def _bam_to_allc_worker(
                 )
                 cov_dict[context] += cov
                 mc_dict[context] += unconverted_c
+                num_dict[context] += 1
                 out += data
                 cur_out_pos += len(data)
 
@@ -522,11 +532,16 @@ def _bam_to_allc_worker(
     if tabix:
         subprocess.run(shlex.split(f"tabix -b 2 -e 2 -s 1 {output_path}"), check=True)
 
-    count_df = pd.DataFrame({"mc": mc_dict, "cov": cov_dict})
+    count_df = pd.DataFrame({"mc": mc_dict, "cov": cov_dict, "number": num_dict})
     count_df["mc_rate"] = count_df["mc"] / count_df["cov"]
 
     total_genome_length = fai_df["LENGTH"].sum()
     count_df["genome_cov"] = total_line / total_genome_length
+    if total_cov_raw > 0:
+        count_df["genome_cov_raw_umi"] = total_cov_raw
+        count_df["cell_saturation"] = 1- (total_cov_new / total_cov_raw)
+    if total_cov_new > 0:
+        count_df["genome_cov_new_umi"] = total_cov_new
 
     if save_count_df:
         count_df.to_csv(output_path + ".count.csv")
