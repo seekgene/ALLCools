@@ -438,7 +438,7 @@ def _bam_to_allc_worker(
                 context = seq[(pos - num_upstr_bases) : (pos + num_downstr_bases + 1)]
             except Exception:  # complete context is not available, skip
                 continue
-            if tag and int(fields[3]) > 1:
+            if tag:
                 new_line, cov_raw, cov_new = correct_tag("\t".join(fields), "C")
                 fields = new_line.split("\t")
                 total_cov_raw += int(cov_raw)
@@ -484,7 +484,7 @@ def _bam_to_allc_worker(
                 )
             except Exception:  # complete context is not available, skip
                 continue
-            if tag and int(fields[3]) > 1:
+            if tag:
                 new_line, cov_raw, cov_new = correct_tag("\t".join(fields), "G")
                 fields = new_line.split("\t")
                 total_cov_raw += int(cov_raw)
