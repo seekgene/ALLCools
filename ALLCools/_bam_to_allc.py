@@ -317,12 +317,15 @@ def _bam_to_allc_worker(
 ):
     """None parallel bam_to_allc worker function, call by bam_to_allc."""
     # mpileup
-    mpileup_params = None
+    mpileup_params = ""
     mpileup_fix_output_param = "--no-output-ins-mods --no-output-ins --no-output-ins --no-output-del --no-output-del --no-output-ends "
     if tag:
         mpileup_params = f" --output-extra {tag} "
     if region is None:
-        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} {mpileup_fix_output_param} {bam_path}"
+        mpileup_cmd = (
+            f"samtools mpileup -Q {min_base_quality} -q {min_mapq} -B "
+            f"-f {reference_fasta}{mpileup_params} {mpileup_fix_output_param} {bam_path}"
+        )
         pipes = subprocess.Popen(
             shlex.split(mpileup_cmd),
             stdout=subprocess.PIPE,
@@ -337,7 +340,10 @@ def _bam_to_allc_worker(
             include_header=True,
             samtools_parms_str=None,
         )
-        mpileup_cmd = f"samtools mpileup -Q {min_base_quality} " f"-q {min_mapq} -B -f {reference_fasta} {mpileup_params} {mpileup_fix_output_param} -"
+        mpileup_cmd = (
+            f"samtools mpileup -Q {min_base_quality} -q {min_mapq} -B "
+            f"-f {reference_fasta}{mpileup_params} {mpileup_fix_output_param} -"
+        )
         pipes = subprocess.Popen(
             shlex.split(mpileup_cmd),
             stdin=bam_handle.file,
