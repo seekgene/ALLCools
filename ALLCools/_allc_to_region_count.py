@@ -135,7 +135,6 @@ def _map_to_sparse_chrom_bin(site_bed, out_bed, chrom_size_path, bin_size=500):
 )
 def allc_to_region_count(
     allc_path: str,
-    cmeta_path: str,
     output_prefix: str,
     chrom_size_path: str,
     mc_contexts: List[str],
@@ -148,6 +147,7 @@ def allc_to_region_count(
     remove_tmp: bool = True,
     cpu: int = 1,
     binarize: bool = False,
+    cmeta_path: str = None,
 ):
     """\
     Calculate mC and cov at regional level.

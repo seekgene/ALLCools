@@ -231,7 +231,6 @@ def _extract_allc_parallel(
 )
 def extract_allc(
     allc_path: str,
-    cmeta_path: str,
     output_prefix: str,
     mc_contexts: Union[str, list],
     chrom_size_path: str,
@@ -242,6 +241,7 @@ def extract_allc(
     tabix: bool = True,
     cpu=1,
     binarize=False,
+    cmeta_path: str = None,
 ):
     """\
     Extract information (strand, context) from 1 ALLC file.
