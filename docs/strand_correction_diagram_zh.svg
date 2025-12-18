@@ -1,115 +1,99 @@
-<svg width="1200" height="900" xmlns="http://www.w3.org/2000/svg">
-  <!-- 标题 -->
-  <text x="600" y="30" text-anchor="middle" font-size="24" font-weight="bold" fill="#2c3e50">
-    ALLCools链方向修正机制对比
-  </text>
-  
-  <!-- 原始DNA双链结构 -->
-  <g transform="translate(50, 60)">
-    <rect x="0" y="0" width="1100" height="80" fill="#f8f9fa" stroke="#6c757d" stroke-width="2" rx="5"/>
-    <text x="20" y="25" font-size="16" font-weight="bold" fill="#2c3e50">原始DNA双链结构</text>
-    <text x="20" y="45" font-size="14" font-family="monospace" fill="#e74c3c">
-      5'-ATCGATCG-3'  (正链, C→T转换后: ATCGATCG → ATTGATTG)
-    </text>
-    <text x="20" y="65" font-size="14" font-family="monospace" fill="#3498db">
-      3'-TAGCTAGC-5'  (负链, G→A转换后: TAGCTAGC → TAACTAGC)
-    </text>
-  </g>
-  
-  <!-- Bismark处理方式 -->
-  <g transform="translate(50, 170)">
-    <rect x="0" y="0" width="530" height="200" fill="#ffe6e6" stroke="#dc3545" stroke-width="2" rx="5"/>
-    <text x="20" y="25" font-size="16" font-weight="bold" fill="#dc3545">Bismark处理方式</text>
-    
-    <text x="20" y="50" font-size="12" font-weight="bold" fill="#2c3e50">强制链方向分配:</text>
-    <text x="20" y="70" font-size="12" fill="#e74c3c">• C→T转换reads → 强制映射到正链 (+)</text>
-    <text x="20" y="85" font-size="12" fill="#3498db">• G→A转换reads → 强制映射到负链 (-)</text>
-    
-    <text x="20" y="110" font-size="12" font-weight="bold" fill="#2c3e50">标签标记:</text>
-    <text x="20" y="130" font-size="11" font-family="monospace" fill="#495057">XG="CT" → C→T转换</text>
-    <text x="20" y="145" font-size="11" font-family="monospace" fill="#495057">XG="GA" → G→A转换</text>
-    
-    <text x="20" y="170" font-size="12" font-weight="bold" fill="#28a745">优点:</text>
-    <text x="20" y="185" font-size="11" fill="#495057">链方向一致，分析简单</text>
-  </g>
-  
-  <!-- Hisat-3n处理方式 -->
-  <g transform="translate(620, 170)">
-    <rect x="0" y="0" width="530" height="200" fill="#e6f3ff" stroke="#007bff" stroke-width="2" rx="5"/>
-    <text x="20" y="25" font-size="16" font-weight="bold" fill="#007bff">Hisat-3n处理方式</text>
-    
-    <text x="20" y="50" font-size="12" font-weight="bold" fill="#2c3e50">保持原始方向:</text>
-    <text x="20" y="70" font-size="12" fill="#495057">• R1/R2保持原始mapping方向</text>
-    <text x="20" y="85" font-size="12" fill="#495057">• 同一转换类型可能有不同链方向</text>
-    
-    <text x="20" y="110" font-size="12" font-weight="bold" fill="#2c3e50">标签标记:</text>
-    <text x="20" y="130" font-size="11" font-family="monospace" fill="#495057">YZ="+" → C→T转换</text>
-    <text x="20" y="145" font-size="11" font-family="monospace" fill="#495057">YZ="-" → G→A转换</text>
-    
-    <text x="20" y="170" font-size="12" font-weight="bold" fill="#ffc107">问题:</text>
-    <text x="20" y="185" font-size="11" fill="#495057">链方向不一致，分析复杂</text>
-  </g>
-  
-  <!-- 箭头 -->
-  <path d="M 600 390 L 600 430" stroke="#28a745" stroke-width="4" marker-end="url(#arrowhead)" fill="none"/>
-  
-  <!-- ALLCools解决方案 -->
-  <g transform="translate(50, 450)">
-    <rect x="0" y="0" width="1100" height="180" fill="#e8f5e8" stroke="#28a745" stroke-width="3" rx="5"/>
-    <text x="20" y="25" font-size="18" font-weight="bold" fill="#28a745">ALLCools统一链方向解决方案</text>
-    
-    <text x="20" y="55" font-size="14" font-weight="bold" fill="#2c3e50">_convert_bam_strandness函数逻辑:</text>
-    
-    <g transform="translate(20, 70)">
-      <rect x="0" y="0" width="1060" height="90" fill="#f8f9fa" stroke="#6c757d" stroke-width="1" rx="3"/>
-      <text x="10" y="20" font-size="12" font-family="monospace" fill="#495057">
-        if read.has_tag("YZ"):  # Hisat-3n
-      </text>
-      <text x="30" y="35" font-size="12" font-family="monospace" fill="#495057">
-        is_ct_func = _is_read_ct_conversion_hisat3n
-      </text>
-      <text x="10" y="50" font-size="12" font-family="monospace" fill="#495057">
-        elif read.has_tag("XG"):  # Bismark
-      </text>
-      <text x="30" y="65" font-size="12" font-family="monospace" fill="#495057">
-        is_ct_func = _is_read_ct_conversion_bismark
-      </text>
-      <text x="10" y="80" font-size="12" font-family="monospace" fill="#28a745">
-        # 统一设置: C→T转换→正链(+), G→A转换→负链(-)
-      </text>
-    </g>
-  </g>
-  
-  <!-- 箭头 -->
-  <path d="M 600 650 L 600 690" stroke="#6f42c1" stroke-width="4" marker-end="url(#arrowhead2)" fill="none"/>
-  
-  <!-- 对mpileup分析的影响 -->
-  <g transform="translate(50, 710)">
-    <rect x="0" y="0" width="1100" height="140" fill="#f3e5f5" stroke="#6f42c1" stroke-width="2" rx="5"/>
-    <text x="20" y="25" font-size="16" font-weight="bold" fill="#6f42c1">统一后对mpileup分析的影响</text>
-    
-    <g transform="translate(20, 40)">
-      <text x="0" y="20" font-size="14" font-weight="bold" fill="#2c3e50">C位点分析 (参考碱基=C):</text>
-      <text x="20" y="40" font-size="12" fill="#e74c3c">• 只统计正链reads: "." (未甲基化), "T" (甲基化)</text>
-      
-      <text x="500" y="20" font-size="14" font-weight="bold" fill="#2c3e50">G位点分析 (参考碱基=G):</text>
-      <text x="520" y="40" font-size="12" fill="#3498db">• 只统计负链reads: "," (未甲基化), "a" (甲基化)</text>
-      
-      <text x="0" y="70" font-size="13" font-weight="bold" fill="#28a745">优势:</text>
-      <text x="60" y="70" font-size="12" fill="#495057">兼容多种比对工具 | 统一分析流程 | 自动检测处理 | 保持数据完整性</text>
-      
-      <text x="0" y="95" font-size="13" font-weight="bold" fill="#dc3545">注意:</text>
-      <text x="60" y="95" font-size="12" fill="#495057">需要转换标签(XG/YZ) | 增加处理步骤 | 仅支持Bismark和Hisat-3n</text>
-    </g>
-  </g>
-  
-  <!-- 箭头标记定义 -->
-  <defs>
-    <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
-      <polygon points="0 0, 12 4, 0 8" fill="#28a745"/>
-    </marker>
-    <marker id="arrowhead2" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
-      <polygon points="0 0, 12 4, 0 8" fill="#6f42c1"/>
-    </marker>
-  </defs>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 25.3.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="图层_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 1200 900" style="enable-background:new 0 0 1200 900;" xml:space="preserve">
+<style type="text/css">
+	.st0{enable-background:new    ;}
+	.st1{fill:#2C3E50;}
+	.st2{font-family:'Arial-BoldMT';}
+	.st3{font-size:24px;}
+	.st4{font-family:'AdobeSongStd-Light-GBpc-EUC-H';}
+	.st5{fill:#F8F9FA;stroke:#6C757D;stroke-width:2;}
+	.st6{font-size:16px;}
+	.st7{fill:#E74C3C;}
+	.st8{font-family:'CourierNewPSMT';}
+	.st9{font-size:14px;}
+	.st10{fill:#3498DB;}
+	.st11{fill:#FFE6E6;stroke:#DC3545;stroke-width:2;}
+	.st12{fill:#DC3545;}
+	.st13{font-size:12px;}
+	.st14{font-family:'ArialMT';}
+	.st15{fill:#495057;}
+	.st16{font-size:11px;}
+	.st17{fill:#28A745;}
+	.st18{fill:#E6F3FF;stroke:#007BFF;stroke-width:2;}
+	.st19{fill:#007BFF;}
+	.st20{fill:#FFC107;}
+	.st21{fill:none;}
+	.st22{fill:#E8F5E8;stroke:#28A745;stroke-width:3;}
+	.st23{font-size:18px;}
+	.st24{fill:#F8F9FA;stroke:#6C757D;}
+	.st25{fill:#6F42C1;}
+	.st26{fill:#F3E5F5;stroke:#6F42C1;stroke-width:2;}
+	.st27{font-size:13px;}
+</style>
+<text transform="matrix(1 0 0 1 462.3398 30)" class="st0"><tspan x="0" y="0" class="st1 st2 st3">ALLCools</tspan><tspan x="113.3" y="0" class="st1 st4 st3">链方向修正机制对比</tspan></text>
+<g transform="translate(50, 60)">
+	<path class="st5" d="M5,0h1090c2.8,0,5,2.2,5,5v70c0,2.8-2.2,5-5,5H5c-2.8,0-5-2.2-5-5V5C0,2.2,2.2,0,5,0z"/>
+	<text transform="matrix(1 0 0 1 20 25)" class="st0"><tspan x="0" y="0" class="st1 st4 st6">原始</tspan><tspan x="32" y="0" class="st1 st2 st6">DNA</tspan><tspan x="66.7" y="0" class="st1 st4 st6">双链结构</tspan></text>
+	<text transform="matrix(1 0 0 1 20 45)" class="st0"><tspan x="0" y="0" class="st7 st8 st9">5&apos;-ATCGATCG-3&apos; (</tspan><tspan x="134.4" y="0" class="st7 st4 st9">正链</tspan><tspan x="162.4" y="0" class="st7 st8 st9">, C→T</tspan><tspan x="204.4" y="0" class="st7 st4 st9">转换后</tspan><tspan x="246.4" y="0" class="st7 st8 st9">: ATCGATCG → ATTGATTG)</tspan></text>
+	<text transform="matrix(1 0 0 1 20 65)" class="st0"><tspan x="0" y="0" class="st10 st8 st9">3&apos;-TAGCTAGC-5&apos; (</tspan><tspan x="134.4" y="0" class="st10 st4 st9">负链</tspan><tspan x="162.4" y="0" class="st10 st8 st9">, G→A</tspan><tspan x="204.4" y="0" class="st10 st4 st9">转换后</tspan><tspan x="246.4" y="0" class="st10 st8 st9">: TAGCTAGC → TAACTAGC)</tspan></text>
+</g>
+<g transform="translate(50, 170)">
+	<path class="st11" d="M5,0h520c2.8,0,5,2.2,5,5v190c0,2.8-2.2,5-5,5H5c-2.8,0-5-2.2-5-5V5C0,2.2,2.2,0,5,0z"/>
+	<text transform="matrix(1 0 0 1 20 25)" class="st0"><tspan x="0" y="0" class="st12 st2 st6">Bismark</tspan><tspan x="63.1" y="0" class="st12 st4 st6">处理方式</tspan></text>
+	<text transform="matrix(1 0 0 1 20 50)" class="st0"><tspan x="0" y="0" class="st1 st4 st13">强制链方向分配</tspan><tspan x="84" y="0" class="st1 st2 st13">:</tspan></text>
+	<text transform="matrix(1 0 0 1 20 70)" class="st0"><tspan x="0" y="0" class="st7 st14 st13">• C→T</tspan><tspan x="35.5" y="0" class="st7 st4 st13">转换</tspan><tspan x="59.5" y="0" class="st7 st14 st13">reads → </tspan><tspan x="108.2" y="0" class="st7 st4 st13">强制映射到正链</tspan><tspan x="192.2" y="0" class="st7 st14 st13"> (+)</tspan></text>
+	<text transform="matrix(1 0 0 1 20 85)" class="st0"><tspan x="0" y="0" class="st10 st14 st13">• G→A</tspan><tspan x="36.9" y="0" class="st10 st4 st13">转换</tspan><tspan x="60.9" y="0" class="st10 st14 st13">reads → </tspan><tspan x="109.6" y="0" class="st10 st4 st13">强制映射到负链</tspan><tspan x="193.6" y="0" class="st10 st14 st13"> (-)</tspan></text>
+	<text transform="matrix(1 0 0 1 20 110)" class="st0"><tspan x="0" y="0" class="st1 st4 st13">标签标记</tspan><tspan x="48" y="0" class="st1 st2 st13">:</tspan></text>
+	<text transform="matrix(1 0 0 1 20 130)" class="st0"><tspan x="0" y="0" class="st15 st8 st16">XG=&quot;CT&quot; → C→T</tspan><tspan x="85.8" y="0" class="st15 st4 st16">转换</tspan></text>
+	<text transform="matrix(1 0 0 1 20 145)" class="st0"><tspan x="0" y="0" class="st15 st8 st16">XG=&quot;GA&quot; → G→A</tspan><tspan x="85.8" y="0" class="st15 st4 st16">转换</tspan></text>
+	<text transform="matrix(1 0 0 1 20 170)" class="st0"><tspan x="0" y="0" class="st17 st4 st13">优点</tspan><tspan x="24" y="0" class="st17 st2 st13">:</tspan></text>
+	<text transform="matrix(1 0 0 1 20 185)" class="st15 st4 st16">链方向一致，分析简单</text>
+</g>
+<g transform="translate(620, 170)">
+	<path class="st18" d="M5,0h520c2.8,0,5,2.2,5,5v190c0,2.8-2.2,5-5,5H5c-2.8,0-5-2.2-5-5V5C0,2.2,2.2,0,5,0z"/>
+	<text transform="matrix(1 0 0 1 20 25)" class="st0"><tspan x="0" y="0" class="st19 st2 st6">Hisat-3n</tspan><tspan x="63.1" y="0" class="st19 st4 st6">处理方式</tspan></text>
+	<text transform="matrix(1 0 0 1 20 50)" class="st0"><tspan x="0" y="0" class="st1 st4 st13">保持原始方向</tspan><tspan x="72" y="0" class="st1 st2 st13">:</tspan></text>
+	<text transform="matrix(1 0 0 1 20 70)" class="st0"><tspan x="0" y="0" class="st15 st14 st13">• R1/R2</tspan><tspan x="41.5" y="0" class="st15 st4 st13">保持原始</tspan><tspan x="89.5" y="0" class="st15 st14 st13">mapping</tspan><tspan x="135.6" y="0" class="st15 st4 st13">方向</tspan></text>
+	<text transform="matrix(1 0 0 1 20 85)" class="st0"><tspan x="0" y="0" class="st15 st14 st13">• </tspan><tspan x="7.5" y="0" class="st15 st4 st13">同一转换类型可能有不同链方向</tspan></text>
+	<text transform="matrix(1 0 0 1 20 110)" class="st0"><tspan x="0" y="0" class="st1 st4 st13">标签标记</tspan><tspan x="48" y="0" class="st1 st2 st13">:</tspan></text>
+	<text transform="matrix(1 0 0 1 20 130)" class="st0"><tspan x="0" y="0" class="st15 st8 st16">YZ=&quot;+&quot; → C→T</tspan><tspan x="79.2" y="0" class="st15 st4 st16">转换</tspan></text>
+	<text transform="matrix(1 0 0 1 20 145)" class="st0"><tspan x="0" y="0" class="st15 st8 st16">YZ=&quot;-&quot; → G→A</tspan><tspan x="79.2" y="0" class="st15 st4 st16">转换</tspan></text>
+	<text transform="matrix(1 0 0 1 20 170)" class="st0"><tspan x="0" y="0" class="st20 st4 st13">问题</tspan><tspan x="24" y="0" class="st20 st2 st13">:</tspan></text>
+	<text transform="matrix(1 0 0 1 20 185)" class="st15 st4 st16">链方向不一致，分析复杂</text>
+</g>
+<path class="st21" d=""/>
+<polygon class="st17" points="616,386 600,434 584,386 "/>
+<path marker-end="url(#arrowhead)" class="st17" d="M600,430"/>
+<g transform="translate(50, 450)">
+	<path class="st22" d="M5,0h1090c2.8,0,5,2.2,5,5v170c0,2.8-2.2,5-5,5H5c-2.8,0-5-2.2-5-5V5C0,2.2,2.2,0,5,0z"/>
+	<text transform="matrix(1 0 0 1 20 25)" class="st0"><tspan x="0" y="0" class="st17 st2 st23">ALLCools</tspan><tspan x="85" y="0" class="st17 st4 st23">统一链方向解决方案</tspan></text>
+	<text transform="matrix(1 0 0 1 20 55)" class="st0"><tspan x="0" y="0" class="st1 st2 st9">_convert_bam_strandness</tspan><tspan x="177.4" y="0" class="st1 st4 st9">函数逻辑</tspan><tspan x="233.4" y="0" class="st1 st2 st9">:</tspan></text>
+	<g transform="translate(20, 70)">
+		<path class="st24" d="M3,0h1054c1.7,0,3,1.3,3,3v84c0,1.7-1.3,3-3,3H3c-1.7,0-3-1.3-3-3V3C0,1.3,1.3,0,3,0z"/>
+		<text transform="matrix(1 0 0 1 10 20)" class="st15 st8 st13">if read.has_tag(&quot;YZ&quot;): # Hisat-3n</text>
+		<text transform="matrix(1 0 0 1 30 35)" class="st15 st8 st13">is_ct_func = _is_read_ct_conversion_hisat3n</text>
+		<text transform="matrix(1 0 0 1 10 50)" class="st15 st8 st13">elif read.has_tag(&quot;XG&quot;): # Bismark</text>
+		<text transform="matrix(1 0 0 1 30 65)" class="st15 st8 st13">is_ct_func = _is_read_ct_conversion_bismark</text>
+		<text transform="matrix(1 0 0 1 10 80)" class="st0"><tspan x="0" y="0" class="st17 st8 st13"># </tspan><tspan x="14.4" y="0" class="st17 st4 st13">统一设置</tspan><tspan x="62.4" y="0" class="st17 st8 st13">: C→T</tspan><tspan x="98.4" y="0" class="st17 st4 st13">转换</tspan><tspan x="122.4" y="0" class="st17 st8 st13">→</tspan><tspan x="129.6" y="0" class="st17 st4 st13">正链</tspan><tspan x="153.6" y="0" class="st17 st8 st13">(+), G→A</tspan><tspan x="211.2" y="0" class="st17 st4 st13">转换</tspan><tspan x="235.2" y="0" class="st17 st8 st13">→</tspan><tspan x="242.4" y="0" class="st17 st4 st13">负链</tspan><tspan x="266.4" y="0" class="st17 st8 st13">(-)</tspan></text>
+	</g>
+</g>
+<path class="st21" d=""/>
+<polygon class="st25" points="616,646 600,694 584,646 "/>
+<path marker-end="url(#arrowhead2)" class="st25" d="M600,690"/>
+<g transform="translate(50, 710)">
+	<path class="st26" d="M5,0h1090c2.8,0,5,2.2,5,5v130c0,2.8-2.2,5-5,5H5c-2.8,0-5-2.2-5-5V5C0,2.2,2.2,0,5,0z"/>
+	<text transform="matrix(1 0 0 1 20 25)" class="st0"><tspan x="0" y="0" class="st25 st4 st6">统一后对</tspan><tspan x="64" y="0" class="st25 st2 st6">mpileup</tspan><tspan x="125.3" y="0" class="st25 st4 st6">分析的影响</tspan></text>
+	<g transform="translate(20, 40)">
+		<text transform="matrix(1 0 0 1 0 20)" class="st0"><tspan x="0" y="0" class="st1 st2 st9">C</tspan><tspan x="10.1" y="0" class="st1 st4 st9">位点分析</tspan><tspan x="66.1" y="0" class="st1 st2 st9"> (</tspan><tspan x="74.7" y="0" class="st1 st4 st9">参考碱基</tspan><tspan x="130.7" y="0" class="st1 st2 st9">=C):</tspan></text>
+		<text transform="matrix(1 0 0 1 20 40)" class="st0"><tspan x="0" y="0" class="st7 st14 st13">• </tspan><tspan x="7.5" y="0" class="st7 st4 st13">只统计正链</tspan><tspan x="67.5" y="0" class="st7 st14 st13">reads: &quot;.&quot; (</tspan><tspan x="123.4" y="0" class="st7 st4 st13">甲基化</tspan><tspan x="159.4" y="0" class="st7 st14 st13">), &quot;T&quot; (</tspan><tspan x="193.2" y="0" class="st7 st4 st13">未甲基化</tspan><tspan x="241.2" y="0" class="st7 st14 st13">)</tspan></text>
+		<text transform="matrix(1 0 0 1 500 20)" class="st0"><tspan x="0" y="0" class="st1 st2 st9">G</tspan><tspan x="10.9" y="0" class="st1 st4 st9">位点分析</tspan><tspan x="66.9" y="0" class="st1 st2 st9"> (</tspan><tspan x="75.4" y="0" class="st1 st4 st9">参考碱基</tspan><tspan x="131.4" y="0" class="st1 st2 st9">=G):</tspan></text>
+		<text transform="matrix(1 0 0 1 520 40)" class="st0"><tspan x="0" y="0" class="st10 st14 st13">• </tspan><tspan x="7.5" y="0" class="st10 st4 st13">只统计负链</tspan><tspan x="67.5" y="0" class="st10 st14 st13">reads: &quot;,&quot; (</tspan><tspan x="123.4" y="0" class="st10 st4 st13">甲基化</tspan><tspan x="159.4" y="0" class="st10 st14 st13">), &quot;a&quot; (</tspan><tspan x="192.6" y="0" class="st10 st4 st13">未甲基化</tspan><tspan x="240.6" y="0" class="st10 st14 st13">)</tspan></text>
+		<text transform="matrix(1 0 0 1 0 70)" class="st0"><tspan x="0" y="0" class="st17 st4 st27">优势</tspan><tspan x="26" y="0" class="st17 st2 st27">:</tspan></text>
+		<text transform="matrix(1 0 0 1 60 70)" class="st0"><tspan x="0" y="0" class="st15 st4 st13">兼容多种比对工具</tspan><tspan x="96" y="0" class="st15 st14 st13"> | </tspan><tspan x="105.8" y="0" class="st15 st4 st13">统一分析流程</tspan><tspan x="177.8" y="0" class="st15 st14 st13"> | </tspan><tspan x="187.6" y="0" class="st15 st4 st13">自动检测处理</tspan><tspan x="259.6" y="0" class="st15 st14 st13"> | </tspan><tspan x="269.4" y="0" class="st15 st4 st13">保持数据完整性</tspan></text>
+		<text transform="matrix(1 0 0 1 0 95)" class="st0"><tspan x="0" y="0" class="st12 st4 st27">注意</tspan><tspan x="26" y="0" class="st12 st2 st27">:</tspan></text>
+		<text transform="matrix(1 0 0 1 60 95)" class="st0"><tspan x="0" y="0" class="st15 st4 st13">需要转换标签</tspan><tspan x="72" y="0" class="st15 st14 st13">(XG/YZ) | </tspan><tspan x="125.8" y="0" class="st15 st4 st13">增加处理步骤</tspan><tspan x="197.8" y="0" class="st15 st14 st13"> | </tspan><tspan x="207.6" y="0" class="st15 st4 st13">仅支持</tspan><tspan x="243.6" y="0" class="st15 st14 st13">Bismark</tspan><tspan x="286.9" y="0" class="st15 st4 st13">和</tspan><tspan x="298.9" y="0" class="st15 st14 st13">Hisat-3n</tspan></text>
+	</g>
+</g>
 </svg>
