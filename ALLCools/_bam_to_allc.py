@@ -297,6 +297,10 @@ def correct_tag(mpileup_line, ref_base):
         mpileup_fields[5] = "".join(umi_dict[umi]["qual"][0] for umi in umi_keys)
     cov_new = len(umi_dict)
     return "\t".join(mpileup_fields), cov_raw, cov_new
+def taps_convert(unconverted_c, converted_c):
+    
+    unconverted_c, converted_c = converted_c, unconverted_c
+    return unconverted_c, converted_c
 
 def _bam_to_allc_worker(
     bam_path,
@@ -314,6 +318,7 @@ def _bam_to_allc_worker(
     save_count_df=False,
     tag=None,
     debug=False,
+    taps=False,
 ):
     """None parallel bam_to_allc worker function, call by bam_to_allc."""
     # mpileup
@@ -455,6 +460,8 @@ def _bam_to_allc_worker(
             unconverted_c = fields[4].count(".")
             converted_c = fields[4].count("T")
             cov = unconverted_c + converted_c
+            if taps:
+                unconverted_c, converted_c = taps_convert(unconverted_c, converted_c)
             if cov > 0 and len(context) == context_len:
                 line_counts += 1
                 data = (
@@ -500,6 +507,8 @@ def _bam_to_allc_worker(
             unconverted_c = fields[4].count(",")
             converted_c = fields[4].count("a")
             cov = unconverted_c + converted_c
+            if taps:
+                unconverted_c, converted_c = taps_convert(unconverted_c, converted_c)
             if cov > 0 and len(context) == context_len:
                 line_counts += 1
                 data = (
@@ -585,6 +594,7 @@ def bam_to_allc(
     convert_bam_strandness=False,
     tag=None,
     debug=False,
+    taps=False
 ):
     """\
     Generate 1 ALLC file from 1 position sorted BAM file via samtools mpileup.
@@ -626,7 +636,9 @@ def bam_to_allc(
     debug
         If True, output debug files (mpl_fh1 and mpl_fh2) containing mpileup information.
         Default is False.
-
+    taps
+        If True, output TAPs format ALLC file.
+        Default is False.
     Returns
     -------
     count_df
@@ -703,6 +715,7 @@ def bam_to_allc(
                     "save_count_df": False,
                     "tag": tag,
                     "debug": debug,
+                    "taps": taps,
                 }
                 future_dict[executor.submit(_bam_to_allc_worker, **_kwargs)] = batch_id
 

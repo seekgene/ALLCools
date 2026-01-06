@@ -216,6 +216,9 @@ def bam_to_allc_register_subparser(subparser):
                             action="store_true", 
                             help="Enable debug mode. In debug mode, additional files will be created "
                                  "to store mpileup output for debugging purposes.")
+    parser.add_argument("--taps",
+                        action="store_true", 
+                        help = "TAPS converted data, convert C to T and vice versa."
     parser.set_defaults(debug=False)
     parser.add_argument(
         "--save_count_df",

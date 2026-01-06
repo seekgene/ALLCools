@@ -1,10 +1,10 @@
-name: allcools_dev
+name: allcools_env2
 channels:
     - conda-forge
     - bioconda
     - defaults
 dependencies:
-    - python=3.8
+    - python=3.9
     - pip
     - anndata
     - biopython
@@ -25,7 +25,7 @@ dependencies:
     - pysam
     - pytables
     - scanpy=1.9.8
-    - scikit-learn
+    - scikit-learn=1.4.0
     - seaborn
     - statsmodels
     - xarray
