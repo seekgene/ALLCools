@@ -298,8 +298,9 @@ def correct_tag(mpileup_line, ref_base):
     cov_new = len(umi_dict)
     return "\t".join(mpileup_fields), cov_raw, cov_new
 def taps_convert(unconverted_c, converted_c):
-    
-    unconverted_c, converted_c = converted_c, unconverted_c
+    converted_c_tmp = converted_c
+    converted_c = unconverted_c
+    unconverted_c = converted_c_tmp
     return unconverted_c, converted_c
 
 def _bam_to_allc_worker(
@@ -775,7 +776,8 @@ def bam_to_allc(
             tabix=tabix,
             save_count_df=save_count_df,
             tag=tag,
-            debug=debug
+            debug=debug,
+            taps=taps
         )
 
         # clean up temp bam
