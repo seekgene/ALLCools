@@ -309,7 +309,7 @@ class PairwiseDMG:
         cluster_dist = pd.DataFrame(cluster_dist, index=pc_center.index, columns=pc_center.index)
         cluster_dist_norm = cluster_dist / cluster_dist.values.max()
         cluster_sim = 1 - cluster_dist_norm
-        cluster_pair_sim_dict = {f"{a}-{b}": value for (a, b), value in cluster_sim.unstack().iteritems()}
+        cluster_pair_sim_dict = {f"{a}-{b}": value for (a, b), value in cluster_sim.unstack().items()}
         self.dmg_table["similarity"] = self.dmg_table["left-right"].map(cluster_pair_sim_dict)
 
         # aggregate pairwise DMG to get the cluster level DMG, use the similarity to normalize AUROC
