@@ -58,7 +58,7 @@ def _count_single_allc(allc_path, bed_path, mc_pattern, output_dir, cutoff=0.9, 
     # calculate binom sf (1-cdf) value, hypo bins are close to 1, hyper bins are close to 0
     mc_sum, cov_sum = bin_counts.sum()
     p = mc_sum / (cov_sum + 0.000001)  # prevent empty allc error
-    pv = bin_counts.apply(lambda x: bin_sf(x["cov"], x["mc"], p), axis=1).astype("float16")
+    pv = bin_counts.apply(lambda x: bin_sf(x["cov"], x["mc"], p), axis=1).astype(np.float32)
     if reverse_value:
         # use cdf instead of sf when looking for hyper methylation
         pv = 1 - pv
@@ -169,7 +169,7 @@ def generate_mcad(
 
     # save the data as anndata
     adata = anndata.AnnData(_data, obs=pd.DataFrame([], index=allc_paths.index), var=region_bed)
-    adata.X = adata.X.astype("float16")
+    adata.X = adata.X.astype(np.float32)
     if str(output_prefix)[-5:] in {".mcad", ".h5ad"}:
         output_h5ad_path = output_prefix
     else:

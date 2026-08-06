@@ -31,7 +31,7 @@ def _bin_sf(cov, mc, p):
 def _cell_sf(cell_count_df):
     mc_sum, cov_sum = cell_count_df.sum()
     p = mc_sum / (cov_sum + 0.000001)  # prevent empty allc error
-    pv = cell_count_df.apply(lambda x: _bin_sf(x["cov"], x["mc"], p), axis=1).astype("float16")
+    pv = cell_count_df.apply(lambda x: _bin_sf(x["cov"], x["mc"], p), axis=1).astype(np.float32)
     return pv
 
 
@@ -203,7 +203,7 @@ def _calculate_pv(data, reverse_value, obs_dim, var_dim, cutoff=0.9):
     # get rid of small values, save space and memory
     pv[pv < cutoff] = 0
     pv = xr.DataArray(pv, coords=[data.coords[obs_dim], data.coords[var_dim]], dims=[obs_dim, var_dim])
-    pv = pv.astype("float16")
+    pv = pv.astype(np.float32)
     return pv
 
 

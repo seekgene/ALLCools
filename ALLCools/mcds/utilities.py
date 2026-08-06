@@ -321,7 +321,7 @@ def obj_to_str(ds, coord_dtypes=None):
         coord_dtypes = {}
 
     for k, v in ds.coords.items():
-        if np.issubdtype(v, np.object) or np.issubdtype(v, np.unicode):
+        if np.issubdtype(v, object) or np.issubdtype(v, str):
             if k in coord_dtypes:
                 ds.coords[k] = v.load().astype(coord_dtypes[k])
             else:
