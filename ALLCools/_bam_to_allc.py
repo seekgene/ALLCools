@@ -385,6 +385,10 @@ def _bam_to_allc_worker(
     for line in result_handle:
         total_line += 1
         fields = line.strip().split("\t")
+        if len(fields) < 3:
+            # mpileup can emit a trailing 2-column line (chrom+pos, no ref/cov/seq)
+            # at the last read position; skip it rather than indexing past the end.
+            continue
         fields[2] = fields[2].upper()
         # if chrom changed, read whole chrom seq from fasta
         if fields[0] != cur_chrom:
