@@ -366,7 +366,8 @@ def generate_dataset(
             ds.coords[col] = data
         # change object dtype to string
         for k in ds.coords.keys():
-            if ds.coords[k].dtype == "O":
+            # pandas 3.0 StringDtype 的 str() 是 "str" 不是 "O",需同时匹配
+            if str(ds.coords[k].dtype) in ("object", "str"):
                 ds.coords[k] = ds.coords[k].to_numpy().astype(str)
         ds.to_zarr(f"{output_path}/{region_dim}", mode="a")
 
