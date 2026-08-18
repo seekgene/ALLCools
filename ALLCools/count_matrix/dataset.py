@@ -252,7 +252,7 @@ def _count_single_zarr(
                 )
                 total_ds[f"{region_dim}_da_{mc_type}-hyper-score"] = data
     total_ds = xr.Dataset(total_ds)
-    total_ds.coords[obs_dim] = total_ds.coords[obs_dim].to_numpy(dtype=obs_dim_dtype)
+    total_ds.coords[obs_dim] = total_ds.coords[obs_dim].to_numpy().astype(obs_dim_dtype)
     total_ds.to_zarr(output_path, mode="w")
     return output_path
 
@@ -367,7 +367,7 @@ def generate_dataset(
         # change object dtype to string
         for k in ds.coords.keys():
             if ds.coords[k].dtype == "O":
-                ds.coords[k] = ds.coords[k].to_numpy(dtype=str)
+                ds.coords[k] = ds.coords[k].to_numpy().astype(str)
         ds.to_zarr(f"{output_path}/{region_dim}", mode="a")
 
     # delete tmp
