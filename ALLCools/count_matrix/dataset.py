@@ -252,7 +252,11 @@ def _count_single_zarr(
                 )
                 total_ds[f"{region_dim}_da_{mc_type}-hyper-score"] = data
     total_ds = xr.Dataset(total_ds)
-    total_ds.coords[obs_dim] = total_ds.coords[obs_dim].to_numpy().astype(object)
+    # 所有 StringDtype coord 转 object(xarray/zarr 不兼容 StringDtype)。
+    # 必须用 (dims, object_array) 形式赋值,单值赋值会被 xarray 转回 <U(StrDType)。
+    for k in list(total_ds.coords.keys()):
+        if str(total_ds.coords[k].dtype).startswith("<U") or str(total_ds.coords[k].dtype) in ("object", "str"):
+            total_ds.coords[k] = (total_ds.coords[k].dims, total_ds.coords[k].to_numpy().astype(object))
     total_ds.to_zarr(output_path, mode="w")
     return output_path
 
@@ -367,8 +371,9 @@ def generate_dataset(
         # change object/string dtype to object dtype for zarr compatibility
         for k in ds.coords.keys():
             # pandas 3.0 StringDtype 的 str() 是 "str" 不是 "O",需同时匹配
-            if str(ds.coords[k].dtype) in ("object", "str"):
-                ds.coords[k] = ds.coords[k].to_numpy().astype(object)
+            # 用 (dims, object_array) 形式赋值,避免 xarray 转回 <U(StrDType)
+            if str(ds.coords[k].dtype).startswith("<U") or str(ds.coords[k].dtype) in ("object", "str"):
+                ds.coords[k] = (ds.coords[k].dims, ds.coords[k].to_numpy().astype(object))
         ds.to_zarr(f"{output_path}/{region_dim}", mode="a")
 
     # delete tmp
