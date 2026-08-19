@@ -173,11 +173,11 @@ class DMSAggregate:
         dmr_sample_count.coords["dmr_length"] = dmr_region["end"] - dmr_region["start"]
 
         dmr_sample_count["dmr"] = (
-            dmr_sample_count["dmr_chrom"].to_pandas()
+            dmr_sample_count["dmr_chrom"].to_numpy().astype(object)
             + "-"
-            + dmr_sample_count["dmr_start"].astype(str).to_pandas()
+            + dmr_sample_count["dmr_start"].to_numpy().astype(object)
             + "-"
-            + dmr_sample_count["dmr_length"].astype(str).to_pandas()
+            + dmr_sample_count["dmr_length"].to_numpy().astype(object)
         )
         return dmr_sample_count
 

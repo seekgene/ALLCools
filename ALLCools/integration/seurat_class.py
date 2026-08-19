@@ -831,7 +831,7 @@ class SeuratIntegration:
             with open(f"{adata_dir}/order.txt", "w") as f:
                 for k, v in self.adata_dict.items():
                     for col, val in v.obs.items():
-                        if val.dtype == "O":
+                        if str(val.dtype) in ("object", "str"):
                             v.obs[col] = val.fillna("nan").astype(str)
                         elif val.dtype == "category":
                             v.obs[col] = val.fillna("nan").astype(str)

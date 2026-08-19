@@ -315,13 +315,13 @@ class MCDS(xr.Dataset):
                 use_obs_bool = ds.get_index(obs_dim).isin(use_obs)
                 ds = ds.sel({obs_dim: use_obs_bool})
 
-        # change object dtype to fix-sized string dtype
+        # change object/string dtype to object dtype for zarr compatibility
         if obj_to_str:
             for k in ds.coords.keys():
-                if ds.coords[k].dtype == "O":
+                if str(ds.coords[k].dtype) in ("object", "str"):
                     # must load then convert dtype,
                     # otherwise the size somehow not converted correctly
-                    ds.coords[k] = ds.coords[k].load().astype(str)
+                    ds.coords[k] = ds.coords[k].load().to_numpy().astype(object)
 
         if chunks is not None:
             if chunks == "auto":

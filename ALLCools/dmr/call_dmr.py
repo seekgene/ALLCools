@@ -121,7 +121,7 @@ def _call_dmr_single_chrom(
     dmr_ds.coords["start"] = ds["dms_pos"].groupby(ds["dmr"]).min().to_pandas() - 1
     dmr_ds.coords["end"] = ds["dms_pos"].groupby(ds["dmr"]).max().to_pandas() + 1
     dmr_ds.coords["length"] = dmr_ds.coords["end"] - dmr_ds.coords["start"]
-    dmr_ds.coords["dmr"] = dmr_ds["chrom"].to_pandas().astype(str) + "-" + dmr_ds["dmr"].to_pandas().astype(str)
+    dmr_ds.coords["dmr"] = dmr_ds["chrom"].to_numpy().astype(object) + "-" + dmr_ds["dmr"].to_numpy().astype(object)
 
     # rename none dimensional coords to prevent collision when merge with other ds
     dmr_ds = dmr_ds.rename({k: f"dmr_{k}" for k in dmr_ds.coords.keys() if k not in dmr_ds.dims})

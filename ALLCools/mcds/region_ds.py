@@ -37,7 +37,7 @@ def _bigwig_over_bed(bed: pd.DataFrame, path, value_type="mean", dtype="float32"
             except RuntimeError:
                 # happens when the region has error or chrom not exist in bw
                 # let user decide what happen, here just return nan
-                value = np.NaN
+                value = np.nan
             return value
 
         values = bed.apply(_region_stat, t=value_type, axis=1)
@@ -265,8 +265,8 @@ class RegionDS(xr.Dataset):
         for k, v in bed.items():
             key = f"{region_dim}_{k}"
             ds.coords[key] = v
-            if ds.coords[key].dtype == "object":
-                ds.coords[key] = ds.coords[key].astype(str)
+            if str(ds.coords[key].dtype) in ("object", "str"):
+                ds.coords[key] = ds.coords[key].to_numpy().astype(object)
 
         location = pathlib.Path(location).absolute()
         location.mkdir(exist_ok=True, parents=True)
@@ -384,11 +384,11 @@ class RegionDS(xr.Dataset):
         # TODO: check the chunk issue of RegionDS.open
         # the open function do not preserve the chunk information from zarr
         if chunks is not None:
-            # change object dtype to string
+            # change object/string dtype to object dtype for zarr compatibility
             if obj_to_str:
                 for k in region_ds.coords.keys():
-                    if region_ds.coords[k].dtype == "O":
-                        region_ds.coords[k] = region_ds.coords[k].astype(str)
+                    if str(region_ds.coords[k].dtype) in ("object", "str"):
+                        region_ds.coords[k] = region_ds.coords[k].to_numpy().astype(object)
 
             if chunks == "auto":
                 chunks = {k: min(4096, max(v // 5, 1)) for k, v in region_ds.dims.items()}

@@ -123,11 +123,11 @@ def _perform_rms_batch(output_dir, allc_paths, samples, region, max_row_count, n
     ds = ds.rename({"pos": "dms"})
     # pos is still the genome coords
     ds.coords["pos"] = ds.coords["dms"].copy()
-    # set str coords otherwise the zarr saving raise error
-    ds.coords["chrom"] = ds.coords["chrom"].astype("str")
+    # set coords to object dtype otherwise the zarr saving raise error
+    ds.coords["chrom"] = ds.coords["chrom"].to_numpy().astype(object)
     # reset index to dms_id with int range
-    ds.coords["dms"] = ds.coords["chrom"].to_pandas().astype(str) + "-" + ds.coords["dms"].to_pandas().astype(str)
-    ds.coords["contexts"] = ds.coords["contexts"].astype("str")
+    ds.coords["dms"] = ds.coords["chrom"].to_numpy().astype(object) + "-" + ds.coords["dms"].to_numpy().astype(object)
+    ds.coords["contexts"] = ds.coords["contexts"].to_numpy().astype(object)
 
     # rename none dimensional coords to prevent collision when merge with other ds
     ds = ds.rename({k: f"dms_{k}" for k in ds.coords.keys() if k not in ds.dims})

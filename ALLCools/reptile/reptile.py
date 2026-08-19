@@ -186,7 +186,7 @@ def _predict_sample(
             enhancer_proba.fillna(0, inplace=True)
             total_proba.append(enhancer_proba)
 
-        total_proba = pd.DataFrame({sample: pd.concat(total_proba).astype(np.float16)})
+        total_proba = pd.DataFrame({sample: pd.concat(total_proba).astype(np.float32)})
         # mask small values
         total_proba[total_proba < mask_cutoff] = 0
         total_proba.index.name = region_ds.region_dim

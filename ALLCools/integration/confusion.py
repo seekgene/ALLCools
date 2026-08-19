@@ -99,8 +99,9 @@ def calculate_diagonal_score(confusion_matrix, col_group, row_group):
     """
     # group the confusion matrix by the col_group and row_group,
     # then for each block, calculate the mean overlap score
-    group_overlap_score_mean = confusion_matrix.groupby(col_group, axis=1).apply(
-        lambda sub_df: sub_df.groupby(row_group, axis=0).mean().mean(axis=1)
+    # transposed to avoid removed groupby(axis=1) in pandas 2.0+
+    group_overlap_score_mean = confusion_matrix.T.groupby(col_group).apply(
+        lambda sub_df: sub_df.T.groupby(row_group).mean().mean(axis=1)
     )
 
     # diagonal score is the ratio of the diagonal overlap score sum to the non-diagonal overlap score sum

@@ -323,9 +323,9 @@ def obj_to_str(ds, coord_dtypes=None):
     for k, v in ds.coords.items():
         if np.issubdtype(v, object) or np.issubdtype(v, str):
             if k in coord_dtypes:
-                ds.coords[k] = v.load().astype(coord_dtypes[k])
+                ds.coords[k] = v.load().to_numpy().astype(coord_dtypes[k])
             else:
-                ds.coords[k] = v.load().astype(str)
+                ds.coords[k] = v.load().to_numpy().astype(object)
     return
 
 
@@ -458,10 +458,10 @@ def reduce_zarr_coords_chunks(ds_path, max_size=10000000):
 
     # create a coords only dataset, save to temp zarr
     coord_ds = xr.Dataset({}, coords=ds.coords).load()
-    # turn obj to str
+    # turn obj/string to object dtype for zarr compatibility
     for k, v in coord_ds.coords.items():
-        if v.dtype == "O":
-            coord_ds.coords[k] = v.astype(str)
+        if str(v.dtype) in ("object", "str"):
+            coord_ds.coords[k] = v.to_numpy().astype(object)
     temp_zarr_path = f"{ds_path}_temp.zarr"
     coord_ds.to_zarr(temp_zarr_path, mode="w")
 

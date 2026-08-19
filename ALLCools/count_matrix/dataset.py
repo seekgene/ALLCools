@@ -252,7 +252,7 @@ def _count_single_zarr(
                 )
                 total_ds[f"{region_dim}_da_{mc_type}-hyper-score"] = data
     total_ds = xr.Dataset(total_ds)
-    total_ds.coords[obs_dim] = total_ds.coords[obs_dim].to_numpy().astype(obs_dim_dtype)
+    total_ds.coords[obs_dim] = total_ds.coords[obs_dim].to_numpy().astype(object)
     total_ds.to_zarr(output_path, mode="w")
     return output_path
 
@@ -364,11 +364,11 @@ def generate_dataset(
         ds = xr.Dataset()
         for col, data in bed.items():
             ds.coords[col] = data
-        # change object dtype to string
+        # change object/string dtype to object dtype for zarr compatibility
         for k in ds.coords.keys():
             # pandas 3.0 StringDtype 的 str() 是 "str" 不是 "O",需同时匹配
             if str(ds.coords[k].dtype) in ("object", "str"):
-                ds.coords[k] = ds.coords[k].to_numpy().astype(str)
+                ds.coords[k] = ds.coords[k].to_numpy().astype(object)
         ds.to_zarr(f"{output_path}/{region_dim}", mode="a")
 
     # delete tmp

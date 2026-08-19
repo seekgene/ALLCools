@@ -45,7 +45,7 @@ def _parse_motif(lines, alphabet, background):
 
     txt = lines[1].split(":")[1].strip()
     _m = N_SITES_PATTERN.search(txt)
-    n_sites = int(_m[0]) if _m is not None else np.NaN
+    n_sites = int(_m[0]) if _m is not None else np.nan
 
     _data = []
     for _line in lines[2:]:

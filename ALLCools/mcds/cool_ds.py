@@ -237,7 +237,7 @@ class CoolDS:
                         log1p=False,
                         da_name=_da_name,
                         rotate=False,
-                        rotate_cval=np.NaN,
+                        rotate_cval=np.nan,
                         rotate_height_bp=5000000,
                         dtype=dtype,
                     )
@@ -331,7 +331,7 @@ class CoolDSChrom(xr.Dataset):
         log1p=True,
         da_name="real",
         rotate=False,
-        rotate_cval=np.NaN,
+        rotate_cval=np.nan,
         rotate_height_bp=5000000,
         dtype="float32",
     ):

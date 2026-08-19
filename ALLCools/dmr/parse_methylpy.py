@@ -56,9 +56,9 @@ def methylpy_to_region_ds(dmr_path, output_dir):
         }
     )
 
-    dmr_ds.coords["dmr_chrom"] = dmr_ds.coords["dmr_chrom"].astype("str")
-    dmr_ds.coords["sample"] = dmr_ds.coords["sample"].astype("str")
-    dmr_ds.coords["dmr"] = dmr_ds.coords["dmr"].astype("str")
+    dmr_ds.coords["dmr_chrom"] = dmr_ds.coords["dmr_chrom"].to_numpy().astype(object)
+    dmr_ds.coords["sample"] = dmr_ds.coords["sample"].to_numpy().astype(object)
+    dmr_ds.coords["dmr"] = dmr_ds.coords["dmr"].to_numpy().astype(object)
 
     dmr_ds["dmr_state"] = dmr_ds["dmr_state"].transpose("sample", "dmr")
     dmr_ds["dmr_da_frac"] = dmr_ds["dmr_da_frac"].transpose("sample", "dmr")
