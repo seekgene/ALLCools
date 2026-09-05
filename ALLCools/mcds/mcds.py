@@ -490,7 +490,15 @@ class MCDS(xr.Dataset):
                 feature_cov_mean = _da.sel(count_type="cov").sum(dim="mc_type").mean(dim=obs_dim).squeeze().to_pandas()
             else:
                 feature_cov_mean = _da.sel(count_type="cov").mean(dim=obs_dim).squeeze().to_pandas()
-            self.coords[cov_mean_key] = feature_cov_mean
+            # Explicitly align to var_dim: assigning a pandas Series to coords no
+            # longer aligns by index name on xarray>=2024, which would create a
+            # self-indexed dimension and break filter_feature_by_cov_mean's
+            # .sel({var_dim: ...}) lookup below.
+            self.coords[cov_mean_key] = xr.DataArray(
+                feature_cov_mean.values,
+                dims=var_dim,
+                coords={var_dim: feature_cov_mean.index.values},
+            )
             print(f"Feature {var_dim} mean cov across cells added in MCDS.coords['{cov_mean_key}'].")
         if plot:
             cutoff_vs_cell_remain(feature_cov_mean, name=f"{var_dim}_cov_mean")
