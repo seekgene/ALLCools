@@ -336,7 +336,9 @@ def _bam_to_allc_worker(
             shlex.split(mpileup_cmd),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
         )
     else:
         bam_handle = open_bam(
@@ -355,7 +357,9 @@ def _bam_to_allc_worker(
             stdin=bam_handle.file,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            universal_newlines=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
         )
 
     result_handle = pipes.stdout
