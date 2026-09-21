@@ -2,7 +2,7 @@
 
 [![Tests](https://img.shields.io/github/workflow/status/lhqing/allcools/Test/main)](https://github.com/lhqing/allcools/actions/workflows/test.yml)
 [![Jupyter Book Badge](https://jupyterbook.org/badge.svg)](https://lhqing.github.io/ALLCools/intro.html)
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/lhqing/ALLCools)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/lhqing/ALLCools)
 
 ## About This Fork
 
@@ -94,8 +94,8 @@ Complete usage documentation is available at: [https://lhqing.github.io/ALLCools
 
 ## Version History
 
-### v1.2.0 (Current Version - Seekgene Fork)
-- Updated project version to 1.2.0
+### v1.2.1 (Current Version - Seekgene Fork)
+- Updated project version to 1.2.1
 - **Enhanced bam-to-allc functionality**:
   - Added UMI-based error correction and deduplication
   - Added comprehensive UMI workflow documentation
