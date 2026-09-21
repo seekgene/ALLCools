@@ -1,37 +1,41 @@
 name: allcools_dev
+# Versions aligned with SeekSoulMethyl conda_dependencies_v3.yml (image seeksoulmethyl:v3.0.0-rc10)
 channels:
     - conda-forge
     - bioconda
     - defaults
 dependencies:
-    - python
+    - python=3.12
     - pip
-    - anndata
-    - biopython
-    - dask
-    - numba
+    - anndata=0.11.4
+    - biopython=1.81
+    - dask=2026.7.1
+    - numba=0.66.0
     - flox
-    - htslib>=1.9
-    - jupyter
+    - htslib=1.24
+    - jupyter=1.1.1
     - jupyter_contrib_nbextensions
-    - leidenalg
+    - leidenalg=0.11.0
     - natsort
     - networkx
-    - opentsne
-    - plotly
-    - pybedtools
+    - numpy=2.4.6
+    - opentsne=1.0.4
+    - pandas=2.3.3
+    - plotly=5.13.1
+    - pybedtools=0.10.0
     - pyBigWig
     - pynndescent
-    - pysam
-    - pytables
-    - scanpy
+    - pysam=0.24.0
+    - pytables=3.10.1
+    - scanpy=1.12.3
     - scikit-learn
+    - scipy=1.18.0
     - seaborn
     - statsmodels
-    - xarray
+    - xarray=2025.4.0
     - pyyaml=6.0.3
-    - zarr
-    - samtools
+    - zarr=2.13.3
+    - samtools=1.24
     - pip:
-          - papermill
-          - imblearn
+          - papermill==2.6.0
+          - imbalanced-learn==0.14.2
