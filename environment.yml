@@ -29,7 +29,7 @@ dependencies:
     - seaborn
     - statsmodels
     - xarray
-    - yaml
+    - pyyaml=6.0.3
     - zarr
     - samtools
     - pip:
